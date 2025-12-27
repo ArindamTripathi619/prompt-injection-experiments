@@ -1,0 +1,49 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs (keep tracked logs, ignore new ones)
+*.log
+!results/logs/*.log
+
+# Database (keep tracked databases)
+*.db-journal
+*.db-wal
+
+# Temporary files
+*.tmp
+*.bak
+.cache/
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+
+# Test coverage
+.coverage
+htmlcov/
+
+# MyPy
+.mypy_cache/
