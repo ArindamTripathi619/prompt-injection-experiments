@@ -79,7 +79,8 @@ class Layer5OutputValidation:
         self, 
         request: RequestEnvelope,
         llm_output: str,
-        system_prompt: Optional[str] = None
+        system_prompt: Optional[str] = None,
+        threshold_adjustment: float = 0.0
     ) -> LayerResult:
         """
         Validate LLM output for safety and policy compliance.

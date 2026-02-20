@@ -70,6 +70,41 @@ class ExecutionTrace(BaseModel):
         description="Execution timestamp"
     )
     
+    user_input: Optional[str] = Field(
+        default=None,
+        description="Original user input"
+    )
+    
+    propagation_path: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Detailed propagation path through layers"
+    )
+    
+    bypass_mechanisms: List[str] = Field(
+        default_factory=list,
+        description="Identified bypass mechanisms"
+    )
+    
+    trust_boundary_violations: List[Dict[str, Any]] = Field(
+        default_factory=list,
+        description="Detected trust boundary violations"
+    )
+    
+    coordination_enabled: bool = Field(
+        default=False,
+        description="Whether adaptive coordination was enabled"
+    )
+    
+    coordination_context: Dict[str, Any] = Field(
+        default_factory=dict,
+        description="Shared context for adaptive coordination"
+    )
+    
+    critical_failure_point: Optional[Dict[str, Any]] = Field(
+        default=None,
+        description="Results of critical failure analysis"
+    )
+    
     experiment_id: Optional[str] = Field(
         default=None,
         description="Experiment batch identifier"

@@ -19,7 +19,9 @@ def load_experiment_data(db_path):
     SELECT 
         request_id,
         attack_successful,
-        configuration
+        configuration,
+        user_input,
+        experiment_id
     FROM execution_traces
     """
     
@@ -33,7 +35,9 @@ def load_experiment_data(db_path):
         data.append({
             'request_id': row[0],
             'attack_successful': row[1],
-            'configuration': row[2]
+            'configuration': row[2],
+            'user_input': row[3],
+            'experiment_id': row[4]
         })
     
     return data
@@ -122,10 +126,27 @@ def calculate_asr_comparison_with_stats(data, config_func1, config_func2, name1,
     config2_data = [item for item in data if config_func2(item['configuration'])]
     
     # Create paired dataset (same requests for both configurations)
-    config1_map = {item['request_id']: item['attack_successful'] for item in config1_data}
-    config2_map = {item['request_id']: item['attack_successful'] for item in config2_data}
+    # Use (user_input, trial) as key to avoid UUID mismatch
+    def get_pairing_key(item):
+        user_input = item.get('user_input') or ''
+        exp_id = item.get('experiment_id') or ''
+        trial = 0
+        if '_trial' in exp_id:
+            try:
+                # Extract trial number from end of string (e.g. "..._trial1")
+                trial_str = exp_id.split('_trial')[-1]
+                # Filter out everything after the number (e.g. version names)
+                trial_num_str = ''.join(filter(str.isdigit, trial_str.split('_')[0]))
+                if trial_num_str:
+                    trial = int(trial_num_str)
+            except:
+                pass
+        return (user_input, trial)
+
+    config1_map = {get_pairing_key(item): item['attack_successful'] for item in config1_data}
+    config2_map = {get_pairing_key(item): item['attack_successful'] for item in config2_data}
     
-    # Find common request IDs
+    # Find common keys
     common_ids = set(config1_map.keys()) & set(config2_map.keys())
     
     if not common_ids:
