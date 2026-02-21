@@ -134,7 +134,7 @@ This repository represents archived experimental material for a journal publicat
 ## 👥 Authors
 
 - **Arindam Tripathi** - *Lead Researcher* - [Arindamtripathi619](https://github.com/Arindamtripathi619)
-- **Anti-Gravity Agent** - *Research Execution & Validation*
+- **Arghya Bose** - *Researcher* - [officialarghya29](https://github.com/officialarghya29)
 
 **Supervised by:**
 - **Dr. Sushruta Mishra** - *Faculty, School of Computer Engineering, KIIT University*
