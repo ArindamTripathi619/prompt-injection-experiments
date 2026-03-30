@@ -39,7 +39,7 @@ graph TD
 | **1** | **Boundary** | Character-level validation, preliminary classification, and basic regex filtering. |
 | **2** | **Semantic** | Uses sentence embeddings (`all-MiniLM-L6-v2`) to detect similarity to known attack patterns. |
 | **3** | **Context** | Enforces separation between system instructions and user input (Role/Tag isolation). |
-| **4** | **LLM** | Orchestrates interaction with the LLM backend (Groq/Llama-3) via LiteLLM/MCP. |
+| **4** | **LLM** | Orchestrates interaction with the LLM backend (Groq/Llama-3) via LiteLLM. |
 | **5** | **Output** | Final response filtering for system prompt leakage, policy violations, and semantic consistency. |
 | **6** | **Feedback** | Continuously monitors for evasion patterns and adjusts escalation thresholds in real-time. |
 

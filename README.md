@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-This repository contains the complete experimental validation of a six-layer defense architecture against prompt injection attacks in Large Language Models (LLMs). All experiments were conducted on a high-performance local environment utilizing the **Model Context Protocol (MCP)** and **LiteLLM** for adaptive coordination.
+This repository contains the complete experimental validation of a six-layer defense architecture against prompt injection attacks in Large Language Models (LLMs). All experiments were conducted on a high-performance local environment utilizing **LiteLLM** for adaptive coordination.
 
 ## 📄 Paper Reference
 
