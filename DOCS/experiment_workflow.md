@@ -7,6 +7,7 @@ This document explains how the project orchestrates thousands of experimental in
 The experiment runner is designed for high-performance, multi-threaded validation on Linux environments.
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryTextColor': '#000', 'edgeLabelBackground': '#fff', 'nodeBorder': '#333' }}}%%
 flowchart TD
     Start([Start Experiment Session]) --> Init[Load Configuration & DB]
     Init --> SelectPrompts[Fetch Attack & Benign Prompts]

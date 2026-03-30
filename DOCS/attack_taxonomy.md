@@ -3,6 +3,7 @@
 This project tests against a broad spectrum of prompt injection categories based on the latest adversarial research.
 
 ```mermaid
+%%{init: {'theme': 'base', 'themeVariables': { 'primaryTextColor': '#000', 'nodeTextColor': '#000' }}}%%
 mindmap
   root((Prompt Injection))
     Direct Attacks
