@@ -33,6 +33,15 @@ This research proposes and validates a comprehensive six-layer defense architect
 - **Statistical Significance:** $p < 0.0001$ using McNemar's test for paired data analysis.
 - **Sample Size:** **11,490 execution traces** across 103 configurations, 10 trials per config.
 
+## 🖼️ Visual Documentation
+
+For a deeper understanding of the system architecture and experimental results, please refer to the following rich documents:
+
+- [🏗️ **Architecture Overview**](DOCS/architecture_overview.md) - Detailed view of the 6-layer defense stack.
+- [🔄 **Data Flow & Pipeline**](DOCS/data_flow.md) - How requests traverse the defense pipeline.
+- [🧪 **Experiment Workflow**](DOCS/experiment_workflow.md) - Orchestration of the high-precision validation.
+- [🔍 **Attack Taxonomy**](DOCS/attack_taxonomy.md) - Categorization of injection patterns tested.
+
 ## 🏗️ Repository Structure
 
 ```
