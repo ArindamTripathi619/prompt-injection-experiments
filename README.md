@@ -41,6 +41,7 @@ For a deeper understanding of the system architecture and experimental results, 
 - [🔄 **Data Flow & Pipeline**](DOCS/data_flow.md) - How requests traverse the defense pipeline.
 - [🧪 **Experiment Workflow**](DOCS/experiment_workflow.md) - Orchestration of the high-precision validation.
 - [🔍 **Attack Taxonomy**](DOCS/attack_taxonomy.md) - Categorization of injection patterns tested.
+- [📊 **Evaluation & Statistics**](DOCS/evaluation_methodology.md) - Mathematical foundations and scoring logic.
 
 ## 🏗️ Repository Structure
 
