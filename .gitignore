@@ -64,6 +64,3 @@ visualizations_root/
 Research_Paper_v2.md
 *.docx
 
-# Deprecated Docs
-docs/
-*.tex
