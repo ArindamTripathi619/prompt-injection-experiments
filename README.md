@@ -37,11 +37,20 @@ This research proposes and validates a comprehensive six-layer defense architect
 
 For a deeper understanding of the system architecture and experimental results, please refer to the following rich documents:
 
+### Architecture & Flow
 - [🏗️ **Architecture Overview**](DOCS/architecture_overview.md) - Detailed view of the 6-layer defense stack.
 - [🔄 **Data Flow & Pipeline**](DOCS/data_flow.md) - How requests traverse the defense pipeline.
+- [🧠 **Adaptive Defense Logic**](DOCS/adaptive_logic.md) - Deep dive into Layer 6 escalation mechanisms.
+
+### Research & Analysis
 - [🧪 **Experiment Workflow**](DOCS/experiment_workflow.md) - Orchestration of the high-precision validation.
 - [🔍 **Attack Taxonomy**](DOCS/attack_taxonomy.md) - Categorization of injection patterns tested.
 - [📊 **Evaluation & Statistics**](DOCS/evaluation_methodology.md) - Mathematical foundations and scoring logic.
+- [🧐 **Result Inferences**](DOCS/inferences.md) - Qualitative analysis and the "Isolation Illusion."
+
+### Performance & Development
+- [🛠️ **Developer Guide**](DOCS/developer_guide.md) - Guidelines for extending the defense or adding data.
+- [⚡ **Performance Analysis**](DOCS/performance.md) - Latency, memory usage, and utility trade-offs.
 
 ## 🏗️ Repository Structure
 
