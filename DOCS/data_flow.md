@@ -7,7 +7,6 @@ This document illustrates the journey of a user request through the multi-layer 
 The diagram below shows how a request is processed, with adaptive escalations based on risk levels detected by the initial layers.
 
 ```mermaid
-%%{init: {'theme': 'base', 'themeVariables': { 'primaryTextColor': '#000', 'noteTextColor': '#000', 'actorTextColor': '#000', 'lineColor': '#000' }}}%%
 sequenceDiagram
     participant U as User / Client
     participant P as Unified Pipeline
@@ -43,7 +42,7 @@ sequenceDiagram
 
     rect rgb(240, 240, 240)
     Note over P, L6: Update Learning Models
-    P->>L6: Execution Trace
+    P->>L6: <span style="color:black">Execution Trace</span>
     end
 
     alt No Violation
