@@ -101,7 +101,7 @@ The research is grounded in comprehensive analysis of 12 foundational papers cov
 Figure 1 presents the overall system architecture, Figure 3 illustrates the threat model comparison, Figure 2 details the context isolation mechanism, and Figures 4--6 present experimental evaluation results.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{./visualizations_root/gemini_generated/fig_3.png}}
+\centerline{\includegraphics[width=\columnwidth]{../data/visualizations/figures/fig1.jpeg}}
 \caption{Comparison between prompt injection attack propagation in unprotected applications (direct instruction override) versus mitigated flow under the proposed workflow model (layered validation, context isolation, constraint enforcement).}
 \end{figure}
 
@@ -162,7 +162,7 @@ The system-level workflow model comprises six coordinated defense layers (Figure
 \textbf{Note on Empirical Validation}: Unlike purely theoretical frameworks, this paper presents a fully implemented empirical system architecture and evaluation pipeline, validating the multi-layered defense approach against a comprehensive dataset of 11,490 execution traces. Effectiveness statements refer to directly measured empirical performance quantified through testing.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{./visualizations_root/gemini_generated/fig_1.png}}
+\centerline{\includegraphics[width=\columnwidth]{../data/visualizations/figures/fig2.jpeg}}
 \caption{Overall system-level orchestration of the proposed multi-layer LLM defense architecture (L1--L6), illustrating layer interactions and feedback flow.}
 \end{figure}
 
@@ -212,7 +212,7 @@ The layer addresses system prompt exposure attacks, context override attempts, a
 \end{lstlisting}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=0.8\columnwidth]{./visualizations_root/gemini_generated/fig_2.png}}
+\centerline{\includegraphics[width=0.8\columnwidth]{../data/visualizations/figures/fig3.jpeg}}
 \caption{Internal structure of the Context Isolation Layer (D3), showing protected instruction segments, constraint enforcement, and user-data separation boundaries.}
 \end{figure}
 
@@ -333,7 +333,7 @@ Full-Stack (D5) & X & X & X & X & X & X \\ \bottomrule
 \end{table}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{./visualizations_root/gemini_generated/fig_5.png}}
+\centerline{\includegraphics[width=\columnwidth]{../data/visualizations/figures/fig4.jpeg}}
 \caption{Incremental defense layering (D1--D5) and their cumulative role in strengthening prompt injection resistance.}
 \end{figure}
 
@@ -352,14 +352,14 @@ Our evaluation demonstrates the substantial effectiveness of the six-layer model
 \end{itemize}
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{./visualizations_root/gemini_generated/fig_4.png}}
+\centerline{\includegraphics[width=\columnwidth]{../data/visualizations/figures/fig5_graph.jpeg}}
 \caption{Attack success rate across defense configurations, demonstrating progressive reduction from baseline to full-stack deployment.}
 \end{figure}
 
 To further assess statistical robustness, we compute confidence intervals for each configuration. As shown in Figure 6, the full-stack architecture not only achieves the lowest attack success rate but also exhibits the narrowest variance range, indicating stable defensive behavior across attack samples.
 
 \begin{figure}[htbp]
-\centerline{\includegraphics[width=\columnwidth]{./visualizations_root/gemini_generated/fig_6.png}}
+\centerline{\includegraphics[width=\columnwidth]{../data/visualizations/figures/fig6_asr_graph.jpeg}}
 \caption{Attack success rates with confidence intervals across defense configurations, illustrating statistical robustness of the proposed full-stack approach.}
 \end{figure}
 
@@ -526,8 +526,8 @@ To ensure the reproducibility of our findings, we provide the following key para
 \bibitem{liu2024houyi}
 Y. Liu et al., ``Prompt injection attack against LLM-integrated applications (HouYi),'' \textit{arXiv preprint arXiv:2306.05499}, 2023.
 
-\bibitem{zheng2023judging}
-L. Zheng et al., ``Judging LLM-as-a-judge with MT-Bench and Chatbot Arena,'' \textit{arXiv preprint arXiv:2306.05685}, 2023.
+\bibitem{maloyan2024judge}
+N. Maloyan and D. Namiot, ``Adversarial Attacks on LLM-as-a-Judge Systems: Insights from Prompt Injections,'' \textit{arXiv preprint arXiv:2504.18333}, 2025.
 
 \bibitem{wei2023jailbroken}
 A. Wei et al., ``Jailbroken: How does LLM safety training fail?'' \textit{arXiv preprint arXiv:2307.02483}, 2023.
@@ -539,19 +539,19 @@ S. T. Burabari, ``Threat modelling and risk analysis for large language model-po
 B. Peng et al., ``Jailbreaking and mitigation of vulnerabilities in large language models,'' \textit{arXiv preprint arXiv:2410.15236}, 2024.
 
 \bibitem{perez2022ignore}
-F. Perez and I. Ribeiro, ``Ignore previous instructions: Injection attacks on large language models,'' \textit{arXiv preprint arXiv:2209.02128}, 2022.
+F. Perez and I. Ribeiro, ``Ignore previous instructions: Injection attacks on large language models,'' \textit{arXiv preprint arXiv:2211.09527}, 2022.
 
-\bibitem{derner2023survey}
-E. Derner and K. Batistić, ``A survey on security and privacy of large language models,'' \textit{arXiv preprint arXiv:2312.10090}, 2023.
+\bibitem{derner2023safeguards}
+E. Derner and K. Batistić, ``Beyond the safeguards: Exploring the security risks of ChatGPT,'' \textit{arXiv preprint arXiv:2305.08005}, 2023.
 
 \bibitem{wang2024study}
 L. Wang et al., ``A comprehensive study of jailbreak attack versus defense for large language models,'' \textit{ACL Findings}, 2024.
 
-\bibitem{toyer2023detecting}
-S. Toyer et al., ``Detecting and mitigating prompt injection attacks,'' \textit{arXiv preprint arXiv:2310.15810}, 2023.
+\bibitem{toyer2023tensortrust}
+S. Toyer et al., ``Tensor Trust: Interpretable Prompt Injection Attacks from an Online Game,'' \textit{arXiv preprint arXiv:2311.01011}, 2023.
 
-\bibitem{li2024era}
-H. Li et al., ``A new era in LLM security: Multi-layer and system-level analysis,'' \textit{arXiv preprint arXiv:2402.18649}, 2024.
+\bibitem{wu2024era}
+F. Wu et al., ``A New Era in LLM Security: Exploring Security Concerns in Real-World LLM-based Systems,'' \textit{arXiv preprint arXiv:2402.18649}, 2024.
 
 \bibitem{chase2023langchain}
 H. Chase, ``LangChain,'' \textit{GitHub repository}, 2023. Available: \url{https://github.com/langchain-ai/langchain}

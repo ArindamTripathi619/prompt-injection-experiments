@@ -36,5 +36,7 @@ mindmap
 - **Direct Injection**: Classic "Ignore all previous instructions" style attacks.
 - **Semantic Injection**: Sophisticated social engineering prompts that appear benign to keyword filters.
 - **Context Override**: Attempts to use role-based messages or tags to trick the model into a system role.
+- **Jailbreak**: Prompt patterns breaking standard LLM safety boundaries via role-play or persona adoption.
+- **Multi-Turn**: Sequence-based injections where adversarial context is established across a mock conversational history.
 - **Encodings**: Using Base64 or other encodings to bypass preliminary classification layers.
 - **Stealth**: High-complexity attacks designed to exploit Trust Boundary violations even in isolated environments.

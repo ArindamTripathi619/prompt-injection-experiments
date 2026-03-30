@@ -25,13 +25,13 @@ This research proposes and validates a comprehensive six-layer defense architect
 
 ### Key Findings
 
-- **Baseline Attack Success Rate (ASR):** 4.19% (Neutralizing standard injection vectors)
-- **Full Stack Effectiveness:** **0.00% ASR** (100% Risk Reduction relative to baseline)
-- **Stealth Attack Vulnerability:** Isolated Layer 3 (Context Isolation) yields **37.4% ASR** (Critical Failure)
-- **Coordinated Defense:** The integrated 6-layer workflow achieves statistically significant neutralization of stealth attacks ($p < 0.0001$).
-- **Utility Validation:** **0.0% False Positive Rate (FPR)** across 1,000 diverse benign prompt tests.
-- **Statistical Significance:** $p < 0.0001$ using McNemar's test for paired data analysis.
-- **Sample Size:** **11,490 execution traces** across 103 configurations, 10 trials per config.
+- **Baseline Attack Success Rate (ASR):** **80.8%** — the unprotected LLM is highly vulnerable (95% CI [75.5%, 85.1%])
+- **Full Stack Aggregate ASR:** **18.9%** — a **76.6% relative risk reduction** over the baseline
+- **Full Stack Stealth-Subset ASR:** **0.0%** across 2,450 stealth traces (95% CI [0.0%, 0.12%])
+- **Isolation Illusion:** Isolated Layer 3 (Context Isolation) alone yields **80.8% ASR** — statistically identical to no defense (p ≈ 1.0), demonstrating that logical isolation without semantic filtering provides zero standalone protection
+- **Utility Validation:** **0.0% False Positive Rate (FPR)** across 1,000 diverse benign prompt tests (95% CI [0.0%, 0.37%])
+- **Statistical Significance:** McNemar's $\chi^2(1) = 173.0, p < 0.001$ (paired N=260 core adversarial prompts)
+- **Sample Size:** **11,490 execution traces** across 103 configurations, evaluated using an independent LLM-as-a-Judge (Llama-3.1-405b)
 
 ## 🖼️ Visual Documentation
 
@@ -81,8 +81,8 @@ prompt-injection-experiments/
 We conducted a high-precision experimental campaign involving **11,490 individual LLM interactions**:
 
 1. **Baseline Campaign**: Evaluated vanilla LLM performance vs. standard layered defenses.
-2. **Layer Ablation Study**: Identified the 'Isolation Illusion' where Layer 3 (Context Isolation) fails in isolation (37.4% ASR) but succeeds when coordinated.
-3. **Utility Stress Test**: Processed 1,000 diverse benign prompts (Professional, Creative, Technical) through the full defense stack to confirm a 0.0% False Positive Rate.
+2. **Layer Ablation Study**: Identified the **'Isolation Illusion'** where Layer 3 (Context Isolation) fails catastrophically in isolation (**80.8% ASR — no improvement vs. baseline**) but contributes effectively when coordinated within the full stack, confirming that semantic filtering is a prerequisite for isolation to work.
+3. **Utility Stress Test**: Processed 1,000 diverse benign prompts (Professional, Creative, Technical) through the full defense stack to confirm a **0.0% False Positive Rate** (95% CI [0.0%, 0.37%]).
 
 ### Infrastructure: High-Performance Setup
 
@@ -92,7 +92,9 @@ The experimental validation was optimized for the following environment:
 - **CPU:** AMD Ryzen 7 8840HS (8 Cores, 16 Threads)
 - **Memory:** 32GB RAM
 - **LLM Backend:** **groq/llama-3.3-70b-versatile** (via local LiteLLM proxy)
-- **Performance**: Multithreaded orchestration achieved 10,050 traces in under 3 hours.
+- **Performance**: Multithreaded orchestration achieved **11,490 traces in approximately 3.5 hours**.
+- **Evaluator**: Independent LLM-as-a-Judge (`Llama-3.1-405b`) for binary ASR classification
+- **Parameters**: Temperature: 0.0 (Deterministic), Top P: 1.0
 
 ## 🚀 Reproducing the Results
 
@@ -135,16 +137,22 @@ python src/statistical_analysis.py
 
 ### Overall Attack Success Rate (ASR)
 
-| Configuration | ASR | 95% CI | Change |
-|--------------|-----|---------|---------|
-| Baseline (No Defense) | 4.19% | [2.66%, 6.52%] | - |
-| Stealth Attacks (L3 Solo) | 37.4% | [32.1%, 43.1%] | +792.6% |
-| **Full Stack (L1-L6)** | **0.00%** | [0.00%, 0.71%] | **-100.0%** |
+| Configuration | ASR | 95% CI | Notes |
+|---|---|---|---|
+| Baseline (No Defense) | **80.8%** | [75.5%, 85.1%] | Unprotected LLM |
+| Semantic Only (L2) | 38.5% | [32.8%, 44.5%] | Standalone semantic filter |
+| Layer 3 Solo (Isolation Only) | **80.8%** | [75.5%, 85.1%] | No measurable improvement — the "Isolation Illusion" |
+| Output Solo (L5) | 25.4% | [20.5%, 31.0%] | Standalone output filter |
+| **Full Stack (L1-L6) — Aggregate** | **18.9%** | [18.1%, 19.8%] | **76.6% relative reduction** |
+| **Full Stack — Stealth Subset only** | **0.0%** | [0.0%, 0.12%] | Over 2,450 stealth traces |
 
-### McNemar's Significance Test (Paired Matching)
+### McNemar's Significance Test (Paired Core Subset, N=260 prompts)
 
-- **Full Stack vs. Baseline**: $\chi^2 = 72.0, p < 0.0001$
-- **Full Stack vs. L3 Solo**: $\chi^2 = 161.0, p < 0.0001$
+| Comparison | χ² | p-value |
+|---|---|---|
+| **Full Stack vs. Baseline** | **χ²(1) = 173.0** | **p < 0.001** |
+| **Full Stack vs. L3 Solo** | **χ²(1) = 161.0** | **p < 0.0001** |
+| Cohen's h (Full Stack vs. Baseline) | h = 1.33 | Large effect size |
 
 ## 🤝 Contributing
 
@@ -165,5 +173,5 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Last Updated:** February 2026  
-**Status**: Final Experimental Validation Corrected (0.0% ASR)
+**Last Updated:** March 2026 — README synced with `Research_Paper.tex` (final February 2026 validation)  
+**Status:** Final Experimental Validation — 11,490 traces, Groq/Llama-3.3-70b, 0.0% stealth-subset ASR, 18.9% aggregate ASR, 0.0% FPR
