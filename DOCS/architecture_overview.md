@@ -24,12 +24,12 @@ graph TD
 
     L5 --> B[Secure Response]
 
-    style L1 fill:#f9f,stroke:#333,stroke-width:2px
-    style L2 fill:#bbf,stroke:#333,stroke-width:2px
-    style L3 fill:#bfb,stroke:#333,stroke-width:2px
-    style L4 fill:#fbb,stroke:#333,stroke-width:2px
-    style L5 fill:#fb8,stroke:#333,stroke-width:2px
-    style L6 fill:#8ff,stroke:#333,stroke-width:2px
+    style L1 fill:#f9f,stroke:#333,stroke-width:2px,color:#000
+    style L2 fill:#bbf,stroke:#333,stroke-width:2px,color:#000
+    style L3 fill:#bfb,stroke:#333,stroke-width:2px,color:#000
+    style L4 fill:#fbb,stroke:#333,stroke-width:2px,color:#000
+    style L5 fill:#fb8,stroke:#333,stroke-width:2px,color:#000
+    style L6 fill:#8ff,stroke:#333,stroke-width:2px,color:#000
 ```
 
 ## Layer Responsibilities
