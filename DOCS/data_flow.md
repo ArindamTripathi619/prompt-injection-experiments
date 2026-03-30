@@ -42,7 +42,7 @@ sequenceDiagram
 
     rect rgb(240, 240, 240)
     Note over P, L6: Update Learning Models
-    P->>L6: <span style="color:black">Execution Trace</span>
+    P->>L6: Execution Trace
     end
 
     alt No Violation
