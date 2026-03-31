@@ -588,7 +588,7 @@ The Full-Stack defense operates as an integrated evaluation pipeline. Incoming p
 
 15. Tony Shi, Yueyang Qiu, et al. (2025). PromptArmor: Simple yet Effective Prompt Injection Defenses. *arXiv preprint arXiv:2507.15219*. DOI: https://doi.org/10.48550/arXiv.2507.15219
 
-16. Krzysztof Jedrzejewski, Davide Fucci, and Oleg Adamov. (2025). ThreMoLIA: Threat Modeling of Large Language Model-Integrated Applications. *Proceedings of the 2025 International Conference on Software and System Processes (ICSSP)*. DOI: https://doi.org/10.1109/ICSSP.2025.00012
+16. Felix Viktor Jedrzejewski, Davide Fucci, and Oleksandr Adamov. (2025). ThreMoLIA: Threat Modeling of Large Language Model-Integrated Applications. *arXiv preprint arXiv:2504.18369*. DOI: https://doi.org/10.48550/arXiv.2504.18369
 
 17. NIST. (2023). NIST SP 800-53 Rev. 5: Security and Privacy Controls for Information Systems and Organizations. *National Institute of Standards and Technology*. DOI: https://doi.org/10.6028/NIST.SP.800-53r5
 
