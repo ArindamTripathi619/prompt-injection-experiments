@@ -63,4 +63,4 @@ data/*.db
 visualizations_root/
 Research_Paper_v2.md
 *.docx
-
+output/
