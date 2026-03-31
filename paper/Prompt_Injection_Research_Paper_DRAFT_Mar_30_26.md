@@ -562,9 +562,9 @@ The Full-Stack defense operates as an integrated evaluation pipeline. Incoming p
 
 2. Nikolai Maloyan and Dmitry Namiot. (2025). Adversarial Attacks on LLM-as-a-Judge Systems: Insights from Prompt Injections. *arXiv preprint arXiv:2504.18333*. DOI: https://doi.org/10.48550/arXiv.2504.18333
 
-3. Alexander Wei, Nika Haghtalab, and Jacob Steinhardt. (2023). Jailbroken: How does LLM safety training fail? *Advances in Neural Information Processing Systems (NeurIPS 2023)*, 36.
+3. Alexander Wei, Nika Haghtalab, and Jacob Steinhardt. (2023). Jailbroken: How does LLM safety training fail? *Advances in Neural Information Processing Systems (NeurIPS 2023)*, 36. DOI: https://doi.org/10.48550/arXiv.2307.02483
 
-4. Shenyi Zhang, Yuchen Zhai, Keyan Guo, Hongxin Hu, Shengnan Guo, Zheng Fang, Lingchen Zhao, Chao Shen, Cong Wang, and Qian Wang. (2025). JBShield: Defending large language models from jailbreak attacks through activated concept analysis and manipulation. *Proceedings of the 34th USENIX Security Symposium (USENIX Security 2025)*.
+4. Shenyi Zhang, Yuchen Zhai, Keyan Guo, Hongxin Hu, Shengnan Guo, Zheng Fang, Lingchen Zhao, Chao Shen, Cong Wang, and Qian Wang. (2025). JBShield: Defending large language models from jailbreak attacks through activated concept analysis and manipulation. *Proceedings of the 34th USENIX Security Symposium (USENIX Security 2025)*. DOI: https://doi.org/10.48550/arXiv.2502.07557
 
 5. Srijan B. Tete. (2024). Threat modelling and risk analysis for large language model-powered applications. *arXiv preprint arXiv:2406.11007*. DOI: https://doi.org/10.48550/arXiv.2406.11007
 
