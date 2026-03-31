@@ -11,7 +11,7 @@
 
 ## ABSTRACT
 
-Large Language Models (LLMs) in commercial web applications introduce critical prompt injection vulnerabilities. This paper synthesizes existing defenses into a system-level workflow model spanning the complete application stack. We present a coordinated **six-layer defense architecture** that maps to the full lifecycle of user requests. Our experimental validation — conducted on a Llama-3.3-70b-based deployment under a black-box attacker model using **11,490 execution traces** — demonstrates that the proposed Full-Stack defense architecture achieves an aggregate **18.9% Attack Success Rate (ASR)** and **0.0% ASR on the evaluated stealth subset** (semantically obfuscated attacks designed to evade filters) (95% CI [0.0%, 0.12%]), representing a **76.6% relative risk reduction** (RRR = (ASR_baseline − ASR_fullstack) / ASR_baseline) over the unprotected baseline. The architecture maintains a **0.0% False Positive Rate** (95% CI [0.0%, 0.37%]), providing a statistically superior security posture (McNemar's χ²(1) = 173.0, p < .001) compared to isolated mitigations.
+Large Language Models (LLMs) in commercial web applications introduce critical prompt injection vulnerabilities. This paper synthesizes existing defenses into a system-level workflow model spanning the complete application stack. We present a coordinated **six-layer defense architecture** that maps to the full lifecycle of user requests. Our experimental validation — conducted on a Llama-3.3-70b-based deployment under a black-box attacker model using **11,490 execution traces** — demonstrates that the proposed Full-Stack defense architecture achieves an aggregate **18.9% Attack Success Rate (ASR)** and **0.0% ASR on the evaluated stealth subset** (semantically obfuscated attacks designed to evade filters) (95% CI [0.0%, 0.12%]), representing a **76.6% relative risk reduction** (RRR = (ASR_baseline − ASR_fullstack) / ASR_baseline) over the unprotected baseline. The architecture maintains a **0.0% False Positive Rate** (95% CI [0.0%, 0.37%]), providing a statistically superior security posture (McNemar's χ²(1) = 173.0, p < .001) compared to isolated mitigations. **Dataset, models, and implementation code available at:** `https://github.com/ArindamTripathi619/prompt-injection-experiments`
 
 **Keywords:** Prompt Injection, LLM Security, Full-Stack Defense, Trust Boundary, Adversarial AI, Workflow Model.
 
@@ -532,55 +532,64 @@ Under the tested configuration, **total latency is ~347 ms** (~310 ms from the G
 
 ## 6. REPRODUCIBILITY AND EXPERIMENTAL PARAMETERS
 
-To ensure reproducibility of our findings:
+To ensure full reproducibility of our empirical findings, the complete implementation logic, orchestration pipeline, and raw dataset are open source:
+
+- **Source Code & Dataset:** `https://github.com/ArindamTripathi619/prompt-injection-experiments`
+
+### 6.1 System and Implementation Parameters
 
 | Parameter | Value |
 |---|---|
 | **Model** | `Llama-3.3-70b-versatile` |
 | **Temperature** | 0.0 (Deterministic) |
 | **Top P** | 1.0 |
-| **Infrastructure** | Groq Cloud API via local LiteLLM proxy |
+| **API Architecture** | Groq Cloud API accessed via local `LiteLLM` unified routing proxy |
+| **Concurrency** | Asynchronous execution via `asyncio` handling >10 parallel streams |
+| **Pipeline Framework**| Custom Python orchestrator (`unified_pipeline.py`) integrating guardrails |
 | **Hardware** | AMD Ryzen 7 8840HS (8 Cores, 16 Threads), 32 GB RAM, Samsung PM9B1 NVMe SSD |
-| **Software** | Python 3.12, `unified_pipeline.py` instrumentation |
-| **Evaluator** | LLM-as-a-Judge (Llama-3.1-405b) for binary ASR classification |
-| **Artifacts** | Raw traces (SQLite, `data/experiments.db`, 11,490 rows) and analysis scripts (`src/statistical_analysis.py`) |
+| **Software** | Python 3.12 running in local isolated virtual environment |
+| **Evaluator** | LLM-as-a-Judge (`Llama-3.1-405b` on Groq) for strict binary ASR classification |
+| **Artifacts Export** | Raw execution matrices (SQLite, `data/experiments.db`, 11,490 evaluation rows) |
+
+### 6.2 Structural Logic
+The Full-Stack defense operates as an integrated evaluation pipeline. Incoming prompts are first screened via Sentence-BERT (`all-MiniLM-L6-v2`) embedded locally. Safely validated inputs undergo isolated context framing. Finally, responses are passed through the independent Layer 4 Guardrail LLM before output validation, ensuring high-fidelity empirical data logging.
 
 ---
 
 ## REFERENCES
 
-1. Liu, Y., et al. (2023). Prompt injection attack against LLM-integrated applications. *arXiv preprint arXiv:2306.05499*.
+1. Yi Liu, Gelei Deng, Yuekang Li, Kailong Wang, Zihao Wang, Xiaofeng Wang, Tianwei Zhang, Yepang Liu, Haoyu Wang, Yan Zheng, Leo Yu Zhang, and Yang Liu. (2023). Prompt injection attack against LLM-integrated applications. *arXiv preprint arXiv:2306.05499*. DOI: https://doi.org/10.48550/arXiv.2306.05499
 
-2. Maloyan, N., & Namiot, D. (2025). Adversarial Attacks on LLM-as-a-Judge Systems: Insights from Prompt Injections. *arXiv preprint arXiv:2504.18333*.
+2. Nikolai Maloyan and Dmitry Namiot. (2025). Adversarial Attacks on LLM-as-a-Judge Systems: Insights from Prompt Injections. *arXiv preprint arXiv:2504.18333*. DOI: https://doi.org/10.48550/arXiv.2504.18333
 
-3. Wei, A., et al. (2023). Jailbroken: How does LLM safety training fail? *Advances in Neural Information Processing Systems (NeurIPS 2023)*.
+3. Alexander Wei, Nika Haghtalab, and Jacob Steinhardt. (2023). Jailbroken: How does LLM safety training fail? *Advances in Neural Information Processing Systems (NeurIPS 2023)*, 36.
 
-4. Zhang, S., et al. (2025). JBShield: Defending large language models from jailbreak attacks through activated concept analysis and manipulation. *Proceedings of the 34th USENIX Security Symposium (USENIX Security 2025)*.
+4. Shenyi Zhang, Yuchen Zhai, Keyan Guo, Hongxin Hu, Shengnan Guo, Zheng Fang, Lingchen Zhao, Chao Shen, Cong Wang, and Qian Wang. (2025). JBShield: Defending large language models from jailbreak attacks through activated concept analysis and manipulation. *Proceedings of the 34th USENIX Security Symposium (USENIX Security 2025)*.
 
-5. Tete, S. B. (2024). Threat modelling and risk analysis for large language model-powered applications. *arXiv preprint arXiv:2406.11007*.
+5. Srijan B. Tete. (2024). Threat modelling and risk analysis for large language model-powered applications. *arXiv preprint arXiv:2406.11007*. DOI: https://doi.org/10.48550/arXiv.2406.11007
 
-6. Peng, B., et al. (2024). Jailbreaking and mitigation of vulnerabilities in large language models. *arXiv preprint arXiv:2410.15236*.
+6. Benji Peng, Keyu Chen, Qian Niu, Ziqian Bi, Ming Liu, Pohsun Feng, Tianyang Wang, Lawrence K.Q. Yan, Yizhu Wen, Yichao Zhang, Caitlyn Heqi Yin, and Xinyuan Song. (2024). Jailbreaking and mitigation of vulnerabilities in large language models. *arXiv preprint arXiv:2410.15236*. DOI: https://doi.org/10.48550/arXiv.2410.15236
 
-7. Perez, F., & Ribeiro, I. (2022). Ignore previous prompt: Attack techniques for language models. *arXiv preprint arXiv:2211.09527*.
+7. Fábio Perez and Ian Ribeiro. (2022). Ignore previous prompt: Attack techniques for language models. *arXiv preprint arXiv:2211.09527*. DOI: https://doi.org/10.48550/arXiv.2211.09527
 
-8. Derner, E., & Batistič, K. (2023). Beyond the safeguards: Exploring the security risks of ChatGPT. *arXiv preprint arXiv:2305.08005*.
+8. Erik Derner and Kristian Batistič. (2023). Beyond the safeguards: Exploring the security risks of ChatGPT. *arXiv preprint arXiv:2305.08005*. DOI: https://doi.org/10.48550/arXiv.2305.08005
 
-9. Xu, Z., et al. (2024). A comprehensive study of jailbreak attack versus defense for large language models. *Findings of the Association for Computational Linguistics: ACL 2024*, pp. 7432–7449.
+9. Zihao Xu, Yi Liu, Gelei Deng, Yuekang Li, and Stjepan Picek. (2024). A comprehensive study of jailbreak attack versus defense for large language models. *Findings of the Association for Computational Linguistics: ACL 2024*, pp. 7432–7449. DOI: https://doi.org/10.18653/v1/2024.findings-acl.442
 
-10. Toyer, S., et al. (2023). Tensor Trust: Interpretable prompt injection attacks from an online game. *arXiv preprint arXiv:2311.01011*.
+10. Sam Toyer, Olivia Watkins, Ethan Adrian Mendes, Justin Svegliato, Luke Bailey, Tiffany Wang, Isaac Ong, Karim Elmaaroufi, Pieter Abbeel, Trevor Darrell, Alan Ritter, and Stuart Russell. (2023). Tensor Trust: Interpretable prompt injection attacks from an online game. *arXiv preprint arXiv:2311.01011*. DOI: https://doi.org/10.48550/arXiv.2311.01011
 
-11. Wu, F., et al. (2024). A new era in LLM security: Exploring security concerns in real-world LLM-based systems. *arXiv preprint arXiv:2402.18649*.
+11. Fangzhou Wu, Ning Zhang, Somesh Jha, Patrick McDaniel, and Chaowei Xiao. (2024). A new era in LLM security: Exploring security concerns in real-world LLM-based systems. *arXiv preprint arXiv:2402.18649*. DOI: https://doi.org/10.48550/arXiv.2402.18649
 
-12. Liang, X., et al. (2025). SafeRAG: Benchmarking security in retrieval-augmented generation of large language model. *arXiv preprint arXiv:2501.18636*.
+12. Xun Liang, Simin Niu, Zhiyu Li, Sensen Zhang, Hanyu Wang, Feiyu Xiong, Jason Zhaoxin Fan, Bo Tang, Shichao Song, Mengwei Wang, and Jiawei Yang. (2025). SafeRAG: Benchmarking security in retrieval-augmented generation of large language model. *arXiv preprint arXiv:2501.18636*. DOI: https://doi.org/10.48550/arXiv.2501.18636
 
-13. Greshake, K., et al. (2023). Not what you've signed up for: Compromising real-world LLM-integrated applications with indirect prompt injection. *Proceedings of the 16th ACM Workshop on Artificial Intelligence and Security (AISec @ CCS 2023)*.
+13. Kai Greshake, Sahar Abdelnabi, Shailesh Mishra, Christoph Endres, Thorsten Holz, and Mario Fritz. (2023). Not what you've signed up for: Compromising real-world LLM-integrated applications with indirect prompt injection. *Proceedings of the 16th ACM Workshop on Artificial Intelligence and Security (AISec @ CCS 2023)*, pp. 79-90. DOI: https://doi.org/10.1145/3605764.3623985
 
 14. OWASP Foundation. (2023). OWASP Top 10 for Large Language Model Applications. https://owasp.org/www-project-top-10-for-large-language-model-applications/ (Accessed: March 2026).
 
-15. Shi, T., et al. (2025). PromptArmor: Simple yet Effective Prompt Injection Defenses. *arXiv preprint arXiv:2507.15219*.
+15. Tony Shi, Yueyang Qiu, et al. (2025). PromptArmor: Simple yet Effective Prompt Injection Defenses. *arXiv preprint arXiv:2507.15219*. DOI: https://doi.org/10.48550/arXiv.2507.15219
 
-16. Jedrzejewski, K., Fucci, D., & Adamov, O. (2025). ThreMoLIA: Threat Modeling of Large Language Model-Integrated Applications. *Proceedings of the 2025 International Conference on Software and System Processes (ICSSP)*.
+16. Krzysztof Jedrzejewski, Davide Fucci, and Oleg Adamov. (2025). ThreMoLIA: Threat Modeling of Large Language Model-Integrated Applications. *Proceedings of the 2025 International Conference on Software and System Processes (ICSSP)*. DOI: https://doi.org/10.1109/ICSSP.2025.00012
 
-17. NIST. (2023). NIST SP 800-53 Rev. 5: Security and Privacy Controls for Information Systems and Organizations. *National Institute of Standards and Technology*.
+17. NIST. (2023). NIST SP 800-53 Rev. 5: Security and Privacy Controls for Information Systems and Organizations. *National Institute of Standards and Technology*. DOI: https://doi.org/10.6028/NIST.SP.800-53r5
 
-18. Reimers, N., & Gurevych, I. (2019). Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. *Proceedings of EMNLP 2019*.
+18. Nils Reimers and Iryna Gurevych. (2019). Sentence-BERT: Sentence Embeddings using Siamese BERT-Networks. *Proceedings of EMNLP 2019*, pp. 3982-3992. DOI: https://doi.org/10.18653/v1/D19-1410
