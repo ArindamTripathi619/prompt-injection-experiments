@@ -70,83 +70,49 @@ Additional references [8, 14, 17, 18] cite foundational security analyses, stand
 
 ## 2. LITERATURE REVIEW
 
-This literature review synthesizes 13 primary research papers addressing prompt injection 
-vulnerabilities across attack methodologies, defense mechanisms, threat modeling, and 
-system-level security analysis. Additional cited works [8, 14, 17, 18] provide foundational 
-standards and tools referenced in the implementation.
+The body of work on prompt injection and LLM security is growing quickly, but it has developed in a way that leaves a specific gap unaddressed — one that this paper is designed to fill. Most existing work either characterizes attacks in isolation or tests one defense at a time. What happens when multiple defenses are layered together, and whether that combination changes the failure modes, has not been systematically studied. The 13 papers reviewed here are organized around that absence.
 
-**Paper 1 — Liu et al. [1] (HouYi):** Liu et al. aim to investigate prompt injection 
-risks in real-world LLM-integrated applications and develop effective black-box attack 
-techniques. They propose HouYi, a three-phase framework using context inference, payload 
-generation (Framework, Separator, Disruptor components), and iterative refinement via 
-GPT-3.5 feedback. They achieve **86.1% attack success rate** across 36 commercial 
-applications including Notion and WriteSonic, demonstrating that existing defenses (XML 
-tagging, paraphrasing, retokenization) can be systematically bypassed.
+### 2.1 Attack Methodologies
 
-**Paper 2 — Maloyan and Namiot [2] (LLM-as-a-Judge Attacks):** Maloyan and Namiot aim 
-to evaluate the vulnerability of LLM-as-a-judge systems to prompt injection attacks. 
-They extend the HouYi framework with four attack variants (Basic Injection, Complex Word 
-Bombardment, Contextual Misdirection, Adaptive Search-Based) and test them across five 
-judge models on diverse evaluation tasks. The key finding here is that attack effectiveness varies substantially by model: success rates range from 42.9% to 73.8% depending on architecture, which means defenses cannot be tuned for a single target model. Multi-model judging committees (5–7 diverse models) push success rates down to 10–27% — the same intuition behind our ensemble-aware Layer 4 design.
+The most consequential attack framework in recent literature is HouYi, introduced by Liu et al. [1]. Where earlier work on injection tended to be proof-of-concept, Liu et al. targeted 36 live commercial deployments — including Notion and WriteSonic — and achieved an 86.1% success rate using a three-phase black-box approach: context inference, payload construction (combining Framework, Separator, and Disruptor components), and iterative refinement driven by GPT-3.5 feedback. The scale of that result matters. It is not a demonstration that some systems are occasionally vulnerable; it is evidence that most deployed systems are consistently vulnerable under a systematic attacker. Existing defenses at the time — XML tagging, paraphrasing, retokenization — were bypassed without special access to the underlying models. HouYi's iterative refinement process later informed how we constructed the stealth corpus in §4.6.
 
-**Paper 3 — Zhang et al. [4] (JBShield):** Zhang et al. aim to detect and mitigate 
-jailbreak attacks by analyzing toxic and jailbreak concepts encoded in LLM hidden 
-representations. They apply Linear Representation Hypothesis with truncated SVD to 
-extract concept subspaces from counterfactual prompt pairs, using cosine 
-similarity-based detection and concept manipulation for mitigation without fine-tuning. 
-They achieve **0.95 F1-score** for detection and reduce attack success rates from 61% 
-to 2% with minimal utility impact (less than 2% MMLU degradation).
+Maloyan and Namiot [2] extended HouYi to a more specific and underexplored target: LLM-as-a-judge systems, where the model being attacked is itself serving as an evaluator. Their four attack variants — Basic Injection, Complex Word Bombardment, Contextual Misdirection, and Adaptive Search-Based — were tested across five judge model architectures on diverse evaluation tasks. The range of results (42.9% to 73.8% depending on architecture) has an important implication for defense design: any protection tuned against a single target model will have unpredictable generalization. Their finding that multi-model judging committees of 5–7 diverse models push success rates down to 10–27% is the empirical basis for the ensemble-aware design we adopted in Layer 4.
 
-**Paper 4 — Tete [5] (Threat Modeling):** Rather than proposing new attacks or defenses, Tete focuses on how to think about risk systematically in LLM deployments. The paper adapts STRIDE and DREAD to the LLM context and applies them to a concrete LLM-Doctor application — the result ranks prompt injection second only to Denial of Service in overall risk score, which is a useful calibration point for prioritizing defensive investment.
+Earlier foundational work by Perez and Ribeiro [7] is worth noting alongside these more recent studies. They were among the first to demonstrate goal-hijacking and prompt leaking as practical, reproducible attacks rather than theoretical edge cases. Less cited but relevant from their paper: using an ensemble of detectors yielded 30–40 percentage point F1 improvements over single-model baselines — an early signal that coordinated detection outperforms classification by any individual component.
 
-**Paper 5 — Peng et al. [6] (Comprehensive Review):** This survey is the broadest categorization in our review — five attack types, two defense families, across image-text and multilingual settings. The finding most relevant to our architecture is that multilingual and multimodal attacks achieve 50–70% success against defenses tuned for standard English text input, which directly motivates embedding-based semantic detection (Layer 2) over keyword matching.
+For understanding attack diversity at scale, Toyer et al. [10] took an unusual approach. Rather than constructing an adversarial dataset in a lab, they built a public game — Tensor Trust — where players competed to either inject prompts or defend against them. The resulting 126,000 adversarial interactions capture the kind of variation that laboratory datasets cannot easily replicate, because the attacks were designed by humans who were actively trying to defeat each other. The patterns that emerged — instruction override, context flooding, role manipulation — directly shaped the seven attack categories we use in §4.2.
 
-**Paper 6 — Shi et al. [15] (PromptArmor):** Shi et al. aim to develop a practical and 
-scalable defense against prompt injection attacks on LLM agents. They design a modular 
-preprocessing layer using a guardrail LLM with carefully crafted prompting strategies 
-to detect and remove injected content via instruction-based detection and fuzzy matching 
-extraction. **PromptArmor-GPT-4o achieves below 1% FPR and FNR** on the AgentDojo 
-benchmark, significantly outperforming six baseline defenses.
+### 2.2 Defense Mechanisms
 
-**Paper 7 — Xu et al. [9] (Jailbreak Attack vs. Defense Study):** Xu et al. run a comparative grid: nine attack techniques against seven defense configurations, across Vicuna, LLaMA, and GPT-3.5 Turbo. The most counterintuitive finding is that white-box attacks underperform universal techniques — and that including special tokens in inputs significantly shifts attack success rates, suggesting the attack surface is more sensitive to low-level input perturbations than expected.
+On the defense side, Zhang et al. [4] propose JBShield, which takes a fundamentally different approach from surface-level filtering. Instead of examining prompt text, JBShield looks at how jailbreak attempts are encoded in LLM hidden representations. Using the Linear Representation Hypothesis with truncated SVD, they extract concept subspaces from counterfactual prompt pairs and use cosine similarity to detect toxic or adversarial intent. The results are strong: 0.95 F1-score for detection and a reduction in attack success from 61% to 2%, with under 2% MMLU utility degradation. The catch, which they acknowledge and we ran into ourselves, is that this requires access to model weights — it is not applicable in commercial API-driven architectures. We flag this as a recommended enhancement for white-box deployments in §3.9.
 
-**Paper 8 — Wei et al. [3] (Jailbroken):** Wei et al. diagnose rather than patch — they want to understand the failure modes, not just measure them. The two they identify (competing training objectives and generalization gaps) explain why even well-aligned models like Llama-3.3-70b still show 80.8% ASR at the baseline in our experiments: the safety training exists, but it operates at the model level, not the architecture level.
+Shi et al. [15] address a more deployment-realistic scenario with PromptArmor, which uses a guardrail LLM as a preprocessing layer — instruction-based detection combined with fuzzy matching extraction to identify and remove injected content before it reaches the primary model. PromptArmor-GPT-4o achieves below 1% FPR and FNR on the AgentDojo benchmark, outperforming six baseline defenses. This is the closest precedent to our Layer 4 implementation, and the guardrail approach we use draws directly on the same intuition: a second LLM seeing the same input with a different objective is better positioned to detect injection than any static filter.
 
-**Paper 9 — Perez and Ribeiro [7] (Injection Attack Techniques):** Perez and Ribeiro are among the first to demonstrate goal-hijacking and prompt leaking as practical, reproducible attacks on deployed systems — not just theoretical vulnerabilities. Their ensemble detection result (30–40 percentage point F1 improvement over single-model baselines) is an early signal of the same principle our full-stack architecture operationalizes: coordinated detection outperforms isolated classification.
+Xu et al. [9] ran perhaps the most systematic comparative study in this area — nine attack techniques against seven defense configurations across Vicuna, LLaMA, and GPT-3.5 Turbo. The result that stuck with us was that white-box attacks (which assume knowledge of model internals) actually underperformed universal techniques in several configurations, and that the presence of special tokens in inputs shifted attack success rates significantly. The attack surface, in other words, is more sensitive to low-level input characteristics than the high-level framing of an attack might suggest. This reinforces the case for character-level validation at the boundary (Layer 1) rather than relying entirely on semantic-level analysis.
 
-**Paper 10 — Wu et al. [11] (System-Level Analysis):** Wu et al. aim to analyze security 
-of complete LLM systems rather than isolated models by examining information flow between 
-components. The authors conduct multi-layer decomposition examining constraints between 
-the LLM core and integrated components (frontend, webtool, sandbox), with end-to-end 
-attack demonstrations on deployed systems like OpenAI GPT-4. System-level analysis 
-exposes critical vulnerabilities in full-stack systems despite multiple safety measures, 
-with successful attacks acquiring unauthorized user chat history by exploiting component 
-boundary weaknesses.
+### 2.3 Threat Modeling and System-Level Analysis
 
-**Paper 11 — Jedrzejewski et al. [16] (ThreMoLIA Framework):** ThreMoLIA (Jedrzejewski et al.) asks whether LLMs can assist in their own threat modeling — using a RAG architecture over historical threat repositories to generate application-specific threat models without manual security expertise. Early feasibility results are promising though the system is still in early stages; it is relevant here as a signal that the threat modeling gap identified in §2.1 is being recognized as automatable.
+Tete [5] approaches the problem differently from the empirical attack-and-defense papers above — the focus is on how to reason about risk in LLM deployments before building defenses at all. Adapting STRIDE and DREAD to an LLM-Doctor application, Tete produces a risk ranking in which prompt injection comes in second only to Denial of Service. That calibration is useful for anyone deciding where to allocate defensive resources, and it frames the architectural priority we gave to input-side filtering in this work.
 
-**Paper 12 — Liang et al. [12] (SafeRAG):** Liang et al. aim to evaluate security 
-vulnerabilities across all components of Retrieval-Augmented Generation (RAG) systems. 
-The authors develop the SafeRAG benchmark classifying attack tasks into silver noise, 
-inter-context conflict, soft ad, and white Denial-of-Service categories. Evaluation 
-across 14 representative RAG implementations reveals significant vulnerabilities with 
-high attack success rates across retriever, filter, ranker, and LLM components despite 
-multiple defensive layers.
+Wu et al. [11] provide the system-level perspective that most other papers in this area lack. Rather than testing attacks against isolated models, they examine information flow across complete LLM-integrated systems — decomposing constraints between the LLM core and surrounding components like the frontend, webtool layer, and sandbox. Their end-to-end attack demonstrations on deployed systems including OpenAI GPT-4 show that component boundary weaknesses allow successful attacks even where multiple safety measures are in place, with one demonstration acquiring unauthorized user chat history by exploiting a gap between components. This is the clearest precedent for framing prompt injection as an architectural problem rather than a model-level one.
 
-**Paper 13 — Greshake et al. [13] (Indirect Prompt Injection):** Greshake et al. 
-systematically demonstrate indirect prompt injection — where malicious instructions 
-embedded in external data sources hijack LLM-integrated applications. Their attacks 
-against real-world systems show that content retrieved from the web, documents, or APIs 
-can silently redirect application behavior, highlighting that trust boundary enforcement 
-must extend beyond direct user input to all data ingestion surfaces.
+Jedrzejewski et al. [16] take this architectural thinking in an interesting direction — ThreMoLIA asks whether LLMs themselves can assist in threat modeling, using a RAG architecture over historical threat repositories to generate application-specific threat models without requiring manual security expertise. Early results are promising, though the system is at a preliminary stage. We include it here as a signal that the threat modeling gap identified in §2.1 is beginning to be treated as an engineering problem rather than a research question.
 
-**Paper 14 — Toyer et al. [10] (Tensor Trust):** Tensor Trust (Toyer et al.) is methodologically unusual: it generates its 126,000 adversarial interactions through a public game where players compete to inject or defend against prompts. This yields attack diversity that laboratory datasets cannot easily replicate. The consistent patterns that emerge — instruction override, context flooding, role manipulation — directly informed the attack categories we use in §4.2.
+### 2.4 Broader Attack Surface
 
-### 2.1 Research Gaps
+Peng et al. [6] provide the widest categorization in this review — five attack types and two defense families across both multimodal and multilingual settings. The number that mattered most for our design: multilingual and image-text attacks achieve 50–70% success against defenses tuned for standard English text. This is a direct argument against keyword-based filtering and in favor of embedding-based semantic detection that is not anchored to surface-level patterns in any one language or modality. It is the primary reason Layer 2 uses cosine similarity over sentence embeddings rather than a keyword blocklist.
 
-Across all 13 papers reviewed, a consistent pattern holds: defenses are evaluated in isolation and attacks are demonstrated against single components. None of the surveyed work deploys multiple defenses simultaneously and measures whether the combination changes the failure modes. That is the gap this paper fills — and the reason the Isolation Illusion (§5.2) went undetected in prior literature: you only see it when you test Layer 3 against a corpus that was already used to tune Layer 2.
+Wei et al. [3] step back further still — rather than measuring attack success, they diagnose *why* safety-trained models fail. Their two identified failure modes are competing training objectives (where instruction-following and safety objectives conflict under adversarial pressure) and generalization gaps (where safety training does not transfer to novel input distributions). These are not flaws in any one model; they are structural properties of how LLMs are trained. This explains something we observed directly in our experiments: Llama-3.3-70b, which has standard safety training, still shows an 80.8% baseline ASR. The safety training is real, but it is not an architectural defense.
 
-### 2.2 Comparison with Existing Work
+Liang et al. [12] extend the threat surface analysis to Retrieval-Augmented Generation specifically. Their SafeRAG benchmark classifies attacks into four categories — silver noise, inter-context conflict, soft ad injection, and white Denial-of-Service — and evaluates 14 representative RAG implementations. High attack success rates appear across every component: retriever, filter, ranker, and LLM core. The implication for layered defense is that injection is not just an input-validation problem; it resurfaces at every point where external data enters the processing pipeline.
+
+Finally, Greshake et al. [13] provide the clearest empirical demonstration of indirect prompt injection — the variant where malicious instructions arrive not through direct user input but embedded in external data the system retrieves, such as web content, documents, or API responses. The attacks shown against real-world systems illustrate that trust boundary enforcement cannot stop at the user input field; it must cover every surface through which external data enters the application. This directly informs Layer 3's design, which treats all externally-sourced content as untrusted regardless of retrieval path.
+
+### 2.5 Research Gaps
+
+The pattern across all 13 papers is consistent: attacks are demonstrated against single components, and defenses are evaluated individually. None of the reviewed work deploys multiple defenses simultaneously and tests whether the combination changes the failure modes — specifically, whether a defense that performs well in isolation might fail differently when another layer is already filtering upstream. That question turns out to matter more than it might seem. Our experiments show that Layer 3 context isolation alone produces an 80.8% ASR — statistically identical to no defense at all — but only because it is evaluated after a corpus has already been filtered by Layer 2. The Isolation Illusion described in §5.2 is not visible in any single-layer evaluation; it only appears when layers are tested together. That is the gap this paper fills.
+
+### 2.6 Comparison with Existing Work
 
 | Attack/Defense | Attack Vectors Exploited | Layers Addressing Gaps |
 |---|---|---|
