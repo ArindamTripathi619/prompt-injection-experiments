@@ -23,19 +23,15 @@ When a web application hands user input directly to an LLM alongside a trusted s
 
 Prompt injection is now a practical, measurable problem in production LLM deployments — not a theoretical concern. When an application passes user input to an LLM alongside a system prompt, there is no hardware boundary separating them: the model processes everything as a token sequence. An attacker who understands this can craft inputs that redirect model behavior, leak system instructions, or hijack tool calls — and the application has no reliable way to tell the difference from the network layer alone. This paper treats that as an architectural problem, not a model alignment problem.
 
-These are not edge cases. HouYi's 86.1% success rate across 36 commercial deployments — including platforms like Notion and WriteSonic — shows that production systems are broadly and consistently vulnerable, not occasionally. The core difficulty is that LLMs respond to meaning, not syntax: the same instruction that fails as **IGNORE ALL RULES** can succeed when embedded in a polite researcher-emulation framing or encoded in Base64. Conventional firewalls have no visibility into that.
-
-Our own testing confirms this across seven distinct attack categories — direct injection, semantic injection, context override, jailbreak, multi-turn, encoding attacks, and stealth variants. Each exploits a different layer of the stack, which is precisely why single-layer defenses fail: a Base64-encoded payload sails past a semantic filter, a polite researcher-emulation prompt slips past a keyword blocklist, and a delimiter hijack (</user_input> followed by fake SYSTEM instructions) breaks context isolation entirely. No single component sees all of these.
+HouYi's 86.1% success rate across 36 commercial deployments — including platforms like Notion and WriteSonic — shows that production systems are broadly and consistently vulnerable, not occasionally. Our own testing confirms this across seven distinct attack categories — direct injection, semantic injection, context override, jailbreak, multi-turn, encoding attacks, and stealth variants. Each exploits a different layer of the stack, which is precisely why single-layer defenses fail: a Base64-encoded payload sails past a semantic filter, a polite researcher-emulation prompt slips past a keyword blocklist, and a delimiter hijack (*</ user_input >* followed by fake SYSTEM instructions) breaks context isolation entirely. No single component sees all of these.
 
 ### 1.2 Current Challenges in Prompt Injection Defense
 
-The standard recommendation — keyword filtering plus prompt engineering — fails in a predictable way. Keyword filters are trivially bypassed with paraphrasing or encoding; our encoding attack category (705 traces, Base64/Hex payloads) confirmed this directly. Prompt engineering raises the bar but doesn't set a ceiling: determined attackers iterate, and our stealth corpus was built precisely by running HouYi's iterative refinement process against our own defenses. The OWASP Top 10 for LLM Applications [14] lists prompt injection as the top vulnerability, yet the defenses most teams actually deploy address it at the component level, not the system level — which is where the real exploitable gaps are.
+The standard recommendation — keyword filtering plus prompt engineering — fails in a predictable way. Keyword filters are trivially bypassed with paraphrasing or encoding; our encoding attack category (705 traces, Base64/Hex payloads) confirmed this directly. Prompt engineering raises the bar but doesn't set a ceiling: determined attackers iterate, and our stealth corpus was built precisely by running HouYi's iterative refinement process against our own defenses. The OWASP Top 10 for LLM Applications [14] lists prompt injection as the top vulnerability, yet component-level defenses remain the standard deployment choice — which is precisely the gap our experiments quantify.
 
-A deeper problem is architectural. Current LLM-integrated applications process user-controlled input and trusted system instructions within the same logical context — there is no hardware-level separation, only API role labels (system vs user). Our experiments quantify what this means in practice: Layer 3 context isolation alone, which is the most commonly recommended defense, yields an 80.8% ASR — statistically identical to running no defense at all (p ≈ 1.0). The LLM's attention mechanism processes all tokens together regardless of which role they were assigned, so a well-crafted stealth payload can semantically influence the output even when it is formally confined to the user context. The utility tradeoff concern also turns out to be less severe than commonly assumed: our full six-layer stack achieved a 0.0% false positive rate across 1,000 diverse benign prompts, confirming that a well-designed multi-layer stack does not require a security-usability tradeoff, at least at this corpus scale.
+A deeper problem is architectural. Current LLM-integrated applications process user-controlled input and trusted system instructions within the same logical context — there is no hardware-level separation, only API role labels (system vs user). Our experiments quantify what this means in practice: Layer 3 context isolation alone, which is the most commonly recommended defense, yields an 80.8% ASR — statistically identical to running no defense at all (p ≈ 1.0). The LLM's attention mechanism processes all tokens together regardless of which role they were assigned, so a well-crafted stealth payload can semantically influence the output even when it is formally confined to the user context.
 
 ### 1.3 Research Questions
-
-This work addresses the following research questions:
 
 - **RQ1:** How do prompt injection attacks propagate across different layers of a Full-Stack web application?
 - **RQ2:** Which system-level trust boundary violations enable successful prompt injection?
@@ -43,26 +39,22 @@ This work addresses the following research questions:
 
 ### 1.4 Proposed Solution and Research Contribution
 
-Rather than proposing isolated security mechanisms, we present a coordinated six-layer defense architecture that maps to the full lifecycle of user requests flowing through LLM-integrated applications. Each layer passes its risk assessment forward — so a high-confidence flag from L2 escalates L3's isolation mode before the LLM ever sees the input.
+We built a six-layer defense architecture where each layer passes a risk signal to the next — a high-confidence flag from L2 escalates L3's isolation mode before the LLM processes the input at all. The architecture is designed around a specific observation: that the exploitable gaps in LLM-integrated applications are not primarily in the model, but in how requests flow through the surrounding system.
 
-The proposed model makes three fundamental contributions to prompt injection defense:
+Three things distinguish this work from prior approaches:
 
-1. **Architecture**: A coordinated six-layer Full-Stack defense architecture combining semantic filtering, logical isolation, constraint enforcement, and adaptive feedback.
-2. **Evaluation**: An empirical validation using **11,490 execution traces**, quantifying the necessity of multi-layer protection over isolated configuration components.
-3. **Insight**: A paired statistical analysis demonstrating a **76.6% risk reduction** and **0.0% Attack Success Rate against stealth variants**, proving that logical isolation fails without semantic filtering.
+1. **Architecture:** A six-layer Full-Stack defense that coordinates semantic filtering, logical isolation, constraint enforcement, and adaptive feedback across the full request lifecycle.
+2. **Evaluation:** An empirical test across 11,490 execution traces measuring whether multi-layer coordination changes failure modes compared to isolated configurations — not just whether individual layers work.
+3. **Findings:** Layer 3 context isolation alone produced 80.8% ASR — statistically identical to no defense — while the full stack reached 0.0% ASR on the stealth subset. The difference is not incremental; it only appears when layers run together.
 
-Most prior work treats prompt injection as a model-level problem — something to solve through better alignment or detection at the LLM itself. Our results suggest that framing misses the point: the 80.8% baseline ASR and the complete failure of isolated Layer 3 both occur despite the underlying Llama-3.3-70b model having standard safety training. The vulnerability lives in the architecture, not just the model.
+Llama-3.3-70b has standard safety training. That training did not prevent an 80.8% baseline ASR. The problem we are solving is not alignment — it is architecture.
 
 ### 1.5 Threat Model
-
-To ground the evaluation, we define an explicit threat model for the LLM-integrated application:
 
 - **Adversary Capabilities**: The attacker is an external web user interacting with the application through standard frontend interfaces.
 - **Access Level**: Black-box execution (no access to model weights, API keys, backend source code, or internal database records).
 - **Adaptability**: The attacker can perform multi-turn interactions and adapt their strategy dynamically based on the system's observable textual outputs.
 - **Restrictions**: The attacker cannot directly alter the physical storage of the system prompt or backend processing architectures.
-
-Additional references [8, 14, 17, 18] cite foundational security analyses, standards, and tools used in the implementation.
 
 ![Comparison between prompt injection attack propagation in unprotected applications versus mitigated flow under the proposed workflow model.](figures/fig1.jpeg)
 
@@ -70,47 +62,51 @@ Additional references [8, 14, 17, 18] cite foundational security analyses, stand
 
 ## 2. LITERATURE REVIEW
 
-The body of work on prompt injection and LLM security is growing quickly, but it has developed in a way that leaves a specific gap unaddressed — one that this paper is designed to fill. Most existing work either characterizes attacks in isolation or tests one defense at a time. What happens when multiple defenses are layered together, and whether that combination changes the failure modes, has not been systematically studied. The 13 papers reviewed here are organized around that absence.
+Thirteen papers form the core of this review, selected because they collectively cover the attack landscape, existing defense approaches, and system-level threat modeling relevant to our experimental setup. Reading them together, what stands out is not any individual result but a consistent methodological choice: each study tests one thing at a time. One attack framework, one defense mechanism, one model. That is a reasonable way to isolate variables, but it means no existing work has measured what happens when defenses interact — whether stacking them changes the failure modes or just adds overhead. That question is what this review is building toward.
 
 ### 2.1 Attack Methodologies
 
-The most consequential attack framework in recent literature is HouYi, introduced by Liu et al. [1]. Where earlier work on injection tended to be proof-of-concept, Liu et al. targeted 36 live commercial deployments — including Notion and WriteSonic — and achieved an 86.1% success rate using a three-phase black-box approach: context inference, payload construction (combining Framework, Separator, and Disruptor components), and iterative refinement driven by GPT-3.5 feedback. The scale of that result matters. It is not a demonstration that some systems are occasionally vulnerable; it is evidence that most deployed systems are consistently vulnerable under a systematic attacker. Existing defenses at the time — XML tagging, paraphrasing, retokenization — were bypassed without special access to the underlying models. HouYi's iterative refinement process later informed how we constructed the stealth corpus in §4.6.
+The most consequential attack framework in recent literature is HouYi, introduced by Liu et al. [1]. Where earlier work on injection tended to be proof-of-concept, Liu et al. targeted 36 live commercial deployments — including Notion and WriteSonic — and achieved an 86.1% success rate using a three-phase black-box approach: context inference, payload construction (combining Framework, Separator, and Disruptor components), and iterative refinement driven by GPT-3.5 feedback. Existing defenses at the time — XML tagging, paraphrasing, retokenization — were bypassed without any access to the underlying models. HouYi's iterative refinement process later informed how we constructed the stealth corpus in §4.6.
 
-Maloyan and Namiot [2] extended HouYi to a more specific and underexplored target: LLM-as-a-judge systems, where the model being attacked is itself serving as an evaluator. Their four attack variants — Basic Injection, Complex Word Bombardment, Contextual Misdirection, and Adaptive Search-Based — were tested across five judge model architectures on diverse evaluation tasks. The range of results (42.9% to 73.8% depending on architecture) has an important implication for defense design: any protection tuned against a single target model will have unpredictable generalization. Their finding that multi-model judging committees of 5–7 diverse models push success rates down to 10–27% is the empirical basis for the ensemble-aware design we adopted in Layer 4.
+Maloyan and Namiot [2] extended HouYi to a more specific and underexplored target: LLM-as-a-judge systems, where the model being attacked is itself serving as an evaluator. Their four attack variants — Basic Injection, Complex Word Bombardment, Contextual Misdirection, and Adaptive Search-Based — were tested across five judge model architectures on diverse evaluation tasks. The range of results (42.9% to 73.8% depending on architecture) makes one thing clear for defense design: tuning protection against a single target model produces unpredictable generalization. Their finding that multi-model judging committees of 5–7 diverse models push success rates down to 10–27% is the empirical basis for the ensemble-aware design we adopted in Layer 4.
 
-Earlier foundational work by Perez and Ribeiro [7] is worth noting alongside these more recent studies. They were among the first to demonstrate goal-hijacking and prompt leaking as practical, reproducible attacks rather than theoretical edge cases. Less cited but relevant from their paper: using an ensemble of detectors yielded 30–40 percentage point F1 improvements over single-model baselines — an early signal that coordinated detection outperforms classification by any individual component.
+Perez and Ribeiro [7] were among the first to demonstrate goal-hijacking and prompt leaking as practical, reproducible attacks rather than theoretical edge cases. Less cited but relevant from their paper: using an ensemble of detectors yielded 30–40 percentage point F1 improvements over single-model baselines — an early signal that coordinated detection outperforms classification by any individual component.
 
 For understanding attack diversity at scale, Toyer et al. [10] took an unusual approach. Rather than constructing an adversarial dataset in a lab, they built a public game — Tensor Trust — where players competed to either inject prompts or defend against them. The resulting 126,000 adversarial interactions capture the kind of variation that laboratory datasets cannot easily replicate, because the attacks were designed by humans who were actively trying to defeat each other. The patterns that emerged — instruction override, context flooding, role manipulation — directly shaped the seven attack categories we use in §4.2.
 
 ### 2.2 Defense Mechanisms
 
-On the defense side, Zhang et al. [4] propose JBShield, which takes a fundamentally different approach from surface-level filtering. Instead of examining prompt text, JBShield looks at how jailbreak attempts are encoded in LLM hidden representations. Using the Linear Representation Hypothesis with truncated SVD, they extract concept subspaces from counterfactual prompt pairs and use cosine similarity to detect toxic or adversarial intent. The results are strong: 0.95 F1-score for detection and a reduction in attack success from 61% to 2%, with under 2% MMLU utility degradation. The catch, which they acknowledge and we ran into ourselves, is that this requires access to model weights — it is not applicable in commercial API-driven architectures. We flag this as a recommended enhancement for white-box deployments in §3.9.
+On the defense side, Zhang et al. [4] propose JBShield, which takes a fundamentally different approach from surface-level filtering. Instead of examining prompt text, JBShield looks at how jailbreak attempts are encoded in LLM hidden representations. Using the Linear Representation Hypothesis with truncated SVD, they extract concept subspaces from counterfactual prompt pairs and use cosine similarity to detect toxic or adversarial intent. Detection reached 0.95 F1-score, with attack success dropping from 61% to 2% and under 2% MMLU utility degradation. The catch, which they acknowledge and we ran into ourselves, is that this requires access to model weights — it is not applicable in commercial API-driven architectures. We flag this as a recommended enhancement for white-box deployments in §3.9.
 
-Shi et al. [15] address a more deployment-realistic scenario with PromptArmor, which uses a guardrail LLM as a preprocessing layer — instruction-based detection combined with fuzzy matching extraction to identify and remove injected content before it reaches the primary model. PromptArmor-GPT-4o achieves below 1% FPR and FNR on the AgentDojo benchmark, outperforming six baseline defenses. This is the closest precedent to our Layer 4 implementation, and the guardrail approach we use draws directly on the same intuition: a second LLM seeing the same input with a different objective is better positioned to detect injection than any static filter.
+Shi et al. [15] address a more deployment-realistic scenario with PromptArmor, which uses a guardrail LLM as a preprocessing layer — instruction-based detection combined with fuzzy matching extraction to identify and remove injected content before it reaches the primary model. PromptArmor-GPT-4o achieves below 1% FPR and FNR on the AgentDojo benchmark, outperforming six baseline defenses. Our Layer 4 implementation follows the same basic structure — a second LLM evaluating the same input with a different objective — though applied within a multi-layer stack rather than as a standalone defense.
 
-Xu et al. [9] ran perhaps the most systematic comparative study in this area — nine attack techniques against seven defense configurations across Vicuna, LLaMA, and GPT-3.5 Turbo. The result that stuck with us was that white-box attacks (which assume knowledge of model internals) actually underperformed universal techniques in several configurations, and that the presence of special tokens in inputs shifted attack success rates significantly. The attack surface, in other words, is more sensitive to low-level input characteristics than the high-level framing of an attack might suggest. This reinforces the case for character-level validation at the boundary (Layer 1) rather than relying entirely on semantic-level analysis.
+Xu et al. [9] ran perhaps the most systematic comparative study in this area — nine attack techniques against seven defense configurations across Vicuna, LLaMA, and GPT-3.5 Turbo. The result that stuck with us was that white-box attacks (which assume knowledge of model internals) actually underperformed universal techniques in several configurations, and that the presence of special tokens in inputs shifted attack success rates significantly. This reinforces the case for character-level validation at the boundary (Layer 1) rather than relying entirely on semantic-level analysis.
 
 ### 2.3 Threat Modeling and System-Level Analysis
 
-Tete [5] approaches the problem differently from the empirical attack-and-defense papers above — the focus is on how to reason about risk in LLM deployments before building defenses at all. Adapting STRIDE and DREAD to an LLM-Doctor application, Tete produces a risk ranking in which prompt injection comes in second only to Denial of Service. That calibration is useful for anyone deciding where to allocate defensive resources, and it frames the architectural priority we gave to input-side filtering in this work.
+Tete [5] approaches the problem differently from the empirical attack-and-defense papers above — the focus is on how to reason about risk in LLM deployments before building defenses at all. Adapting STRIDE and DREAD to an LLM-Doctor application, Tete produces a risk ranking in which prompt injection comes in second only to Denial of Service. That risk ranking is what pushed input-side filtering to the top of our architectural priorities — if prompt injection is the second-highest risk in a representative LLM deployment, that is where the defense should be thickest.
 
-Wu et al. [11] provide the system-level perspective that most other papers in this area lack. Rather than testing attacks against isolated models, they examine information flow across complete LLM-integrated systems — decomposing constraints between the LLM core and surrounding components like the frontend, webtool layer, and sandbox. Their end-to-end attack demonstrations on deployed systems including OpenAI GPT-4 show that component boundary weaknesses allow successful attacks even where multiple safety measures are in place, with one demonstration acquiring unauthorized user chat history by exploiting a gap between components. This is the clearest precedent for framing prompt injection as an architectural problem rather than a model-level one.
+Wu et al. [11] shift the focus from individual model behavior to information flow across complete LLM-integrated systems — decomposing constraints between the LLM core and surrounding components like the frontend, webtool layer, and sandbox. Their end-to-end attack demonstrations on deployed systems including OpenAI GPT-4 show that component boundary weaknesses allow successful attacks even where multiple safety measures are in place, with one demonstration acquiring unauthorized user chat history by exploiting a gap between components — the attack succeeded not because the model was unsafe, but because the system around it was.
 
-Jedrzejewski et al. [16] take this architectural thinking in an interesting direction — ThreMoLIA asks whether LLMs themselves can assist in threat modeling, using a RAG architecture over historical threat repositories to generate application-specific threat models without requiring manual security expertise. Early results are promising, though the system is at a preliminary stage. We include it here as a signal that the threat modeling gap identified in §2.1 is beginning to be treated as an engineering problem rather than a research question.
+Jedrzejewski et al. [16] take this architectural thinking in an interesting direction — ThreMoLIA asks whether LLMs themselves can assist in threat modeling, using a RAG architecture over historical threat repositories to generate application-specific threat models without requiring manual security expertise. Early results are promising, though the system is at a preliminary stage.
 
 ### 2.4 Broader Attack Surface
 
-Peng et al. [6] provide the widest categorization in this review — five attack types and two defense families across both multimodal and multilingual settings. The number that mattered most for our design: multilingual and image-text attacks achieve 50–70% success against defenses tuned for standard English text. This is a direct argument against keyword-based filtering and in favor of embedding-based semantic detection that is not anchored to surface-level patterns in any one language or modality. It is the primary reason Layer 2 uses cosine similarity over sentence embeddings rather than a keyword blocklist.
+Peng et al. [6] provide the widest categorization in this review — five attack types and two defense families across both multimodal and multilingual settings. The number that mattered most for our design: multilingual and image-text attacks achieve 50–70% success against defenses tuned for standard English text. Keyword-based filtering has no answer to that — it is anchored to surface patterns in whatever language it was tuned on. Layer 2 uses cosine similarity over sentence embeddings partly for this reason: embedding-based similarity generalizes across languages and modalities in a way that lexical matching cannot.
 
-Wei et al. [3] step back further still — rather than measuring attack success, they diagnose *why* safety-trained models fail. Their two identified failure modes are competing training objectives (where instruction-following and safety objectives conflict under adversarial pressure) and generalization gaps (where safety training does not transfer to novel input distributions). These are not flaws in any one model; they are structural properties of how LLMs are trained. This explains something we observed directly in our experiments: Llama-3.3-70b, which has standard safety training, still shows an 80.8% baseline ASR. The safety training is real, but it is not an architectural defense.
+Wei et al. [3] step back further still — rather than measuring attack success, they diagnose *why* safety-trained models fail. Their two identified failure modes are competing training objectives (where instruction-following and safety objectives conflict under adversarial pressure) and generalization gaps (where safety training does not transfer to novel input distributions). Neither failure mode is specific to any one model — both follow from how LLMs are trained. This explains something we observed directly in our experiments: Llama-3.3-70b, which has standard safety training, still shows an 80.8% baseline ASR. The safety training is real, but it is not an architectural defense.
 
-Liang et al. [12] extend the threat surface analysis to Retrieval-Augmented Generation specifically. Their SafeRAG benchmark classifies attacks into four categories — silver noise, inter-context conflict, soft ad injection, and white Denial-of-Service — and evaluates 14 representative RAG implementations. High attack success rates appear across every component: retriever, filter, ranker, and LLM core. The implication for layered defense is that injection is not just an input-validation problem; it resurfaces at every point where external data enters the processing pipeline.
+Liang et al. [12] extend the threat surface analysis to Retrieval-Augmented Generation specifically. Their SafeRAG benchmark classifies attacks into four categories — silver noise, inter-context conflict, soft ad injection, and white Denial-of-Service — and evaluates 14 representative RAG implementations. High attack success rates appear across every component: retriever, filter, ranker, and LLM core. For a layered defense, this means input validation at the user boundary is not enough — the same threat reappears wherever external data enters the pipeline.
 
-Finally, Greshake et al. [13] provide the clearest empirical demonstration of indirect prompt injection — the variant where malicious instructions arrive not through direct user input but embedded in external data the system retrieves, such as web content, documents, or API responses. The attacks shown against real-world systems illustrate that trust boundary enforcement cannot stop at the user input field; it must cover every surface through which external data enters the application. This directly informs Layer 3's design, which treats all externally-sourced content as untrusted regardless of retrieval path.
+Greshake et al. [13] demonstrate indirect prompt injection empirically — the variant where malicious instructions arrive embedded in external data the system retrieves, such as web content, documents, or API responses, rather than through direct user input. The attacks shown against real-world systems illustrate that trust boundary enforcement cannot stop at the user input field; it must cover every surface through which external data enters the application. This directly informs Layer 3's design, which treats all externally-sourced content as untrusted regardless of retrieval path.
 
 ### 2.5 Research Gaps
 
-The pattern across all 13 papers is consistent: attacks are demonstrated against single components, and defenses are evaluated individually. None of the reviewed work deploys multiple defenses simultaneously and tests whether the combination changes the failure modes — specifically, whether a defense that performs well in isolation might fail differently when another layer is already filtering upstream. That question turns out to matter more than it might seem. Our experiments show that Layer 3 context isolation alone produces an 80.8% ASR — statistically identical to no defense at all — but only because it is evaluated after a corpus has already been filtered by Layer 2. The Isolation Illusion described in §5.2 is not visible in any single-layer evaluation; it only appears when layers are tested together. That is the gap this paper fills.
+What the 13 papers reviewed here do not address — individually or together — is how defenses interact when stacked. Each study tests one mechanism at a time: one attack framework, one defense configuration, measured in isolation. That is a reasonable experimental choice, but it misses something. A defense that works well alone can appear to work for the wrong reasons once another layer is filtering upstream.
+
+We ran into this directly. Layer 3 context isolation, which is the most commonly recommended single defense, produced 80.8% ASR in our experiments — the same number as running nothing. Not approximately the same; statistically identical (p ≈ 1.0). The reason only becomes visible when you look at what Layer 2 is doing upstream of it: the prompts reaching Layer 3 in isolation are a different, harder set than those reaching it in the full stack. Isolation Solo looks worse than it is in one framing and better than it is in another. Neither single-layer evaluation tells you what happens when both run together.
+
+That interaction — which we call the Isolation Illusion in §5.2 — does not appear in any of the reviewed work because none of it tests layers in combination.
 
 ### 2.6 Comparison with Existing Work
 
@@ -130,7 +126,7 @@ The pattern across all 13 papers is consistent: attacks are demonstrated against
 
 ### 3.1 System-Level Workflow Architecture
 
-The six layers map to distinct points in the request lifecycle — boundary, semantics, context, generation, output, and feedback — and each passes a risk signal forward to the next. The architecture follows **defense-in-depth** principles [17] — not in the sense that any single layer is independently sufficient, but that the layers are designed so an attacker must defeat all of them simultaneously. Our ablation results confirm this: each isolated layer has exploitable failure modes, but the combination eliminates them for the stealth subset entirely.
+The six layers map to distinct points in the request lifecycle — boundary, semantics, context, generation, output, and feedback — and each passes a risk signal forward to the next. The architecture applies defense-in-depth [17]: no single layer is independently sufficient, and our ablation results confirm this directly — each isolated configuration has exploitable failure modes that disappear only when all layers run together.
 
 > **Note on Empirical Validation:** Every effectiveness claim in this section refers to a measured result from the 11,490-trace evaluation — not a design-time assertion. The implementation is fully open source and reproducible (§6).
 
@@ -138,7 +134,7 @@ The six layers map to distinct points in the request lifecycle — boundary, sem
 
 ### 3.2 Layer 1: Request Boundary
 
-This layer performs character-level validation, syntax checking, and preliminary request classification at the application's outermost edge. It handles character encoding validation, length threshold enforcement, and protocol-level checks — catching obfuscated inputs, protocol violations, and parser edge cases before they reach any LLM-aware component. Notably, encoding attacks (705 traces in our corpus, Base64/Hex payloads) are caught here before Layer 2 even runs an embedding pass. The tradeoff is the obvious one: anything that looks syntactically valid passes through, so semantically crafted injections — the majority of our stealth corpus — bypass this layer entirely. Its value is speed and cost, not coverage: it operates at under 1ms locally with no model dependency.
+Layer 1 sits at the application's outermost edge, handling character encoding validation, length threshold enforcement, and protocol-level checks before any input reaches an LLM-aware component. It handles character encoding validation, length threshold enforcement, and protocol-level checks — catching obfuscated inputs, protocol violations, and parser edge cases before they reach any LLM-aware component. Encoding attacks (705 traces in our corpus, Base64/Hex payloads) are caught here before Layer 2 even runs an embedding pass — which means the per-request cost of handling them is essentially zero. Anything that looks syntactically valid passes through — semantically crafted injections, which make up the majority of our stealth corpus, bypass this layer entirely. Its value is speed and cost, not coverage: it operates at under 1ms locally with no model dependency.
 
 **Layer 1 Outputs:**
 ```json
@@ -153,7 +149,7 @@ This layer performs character-level validation, syntax checking, and preliminary
 
 ### 3.3 Layer 2: Input Processing and Semantic Analysis
 
-This layer performs tokenization, semantic analysis, pattern detection, and feature extraction to identify injection indicators beyond syntax validation. The core detection mechanism is cosine similarity between the incoming prompt's embedding and a pre-computed reference set of known attack embeddings — if the similarity score exceeds the configured threshold (default: 0.82), the request is escalated regardless of surface-level syntax.
+The core detection mechanism is cosine similarity between the incoming prompt's embedding and a pre-computed reference set of known attack embeddings — if the similarity score exceeds the configured threshold (default: 0.82), the request is escalated regardless of surface-level syntax.
 
 The layer addresses semantic paraphrasing, encoding-based attacks (Base64, ROT13), and context-manipulation attacks. In practice, Layer 2 was the primary blocker in our dataset — responsible for 5,060 of 7,019 total blocks. Reference embeddings for known attack patterns are pre-computed and cached at startup (.cache/embeddings.pkl), which keeps the per-request cost to ~36ms despite running a full sentence transformer.
 
@@ -171,7 +167,7 @@ The layer addresses semantic paraphrasing, encoding-based attacks (Base64, ROT13
 
 Layer 3 is responsible for keeping the system prompt and user input in separate logical containers — specifically, by enforcing the **system/user** role boundary in the API message structure, wrapping inputs in tagged metadata, and maintaining a session-level privilege hierarchy that marks user-originated instructions as untrusted. In Strict mode it additionally applies randomized delimiter tokens to make prompt boundary injection mechanically harder.
 
-The layer uses programmatic roles (`system` vs `user` messages) and structured data models. **Critically, logical isolation alone is insufficient** — our experiments confirm this quantitatively in §5.2, showing that without complementary semantic filtering, isolation provides no measurable improvement over the unprotected baseline.
+The layer uses programmatic roles (`system` vs `user` messages) and structured data models. Logical isolation alone does not hold — our experiments confirm this in §5.2: without complementary semantic filtering upstream, isolation provides no measurable improvement over the unprotected baseline.
 
 **Layer 3 Outputs:**
 ```json
@@ -188,7 +184,7 @@ The layer uses programmatic roles (`system` vs `user` messages) and structured d
 
 ### 3.5 Layer 4: LLM Interaction and Constraint Enforcement
 
-Core components include constraint enforcement mechanisms and a **secondary Guardrail LLM** performing real-time semantic validation against operational constraints. When Layer 6 elevates the session to Strict isolation mode (risk score > 0.7), Layer 4 additionally executes an **Inner Monologue Check**: it first generates a hidden draft response that identifies the user's inferred intent, compares that intent against the system's security policies, and only then produces the user-facing output — or returns a security error if the intent check fails.
+Layer 4 runs a secondary Guardrail LLM alongside the primary model — its job is real-time semantic validation against operational constraints, independent of whatever the primary model produces. When Layer 6 elevates the session to Strict isolation mode (risk score > 0.7), Layer 4 additionally executes an **Inner Monologue Check**: it first generates a hidden draft response that identifies the user's inferred intent, compares that intent against the system's security policies, and only then produces the user-facing output — or returns a security error if the intent check fails.
 
 > **Implementation note:** While representation-level monitoring (e.g., JBShield) is conceptually attractive, it requires access to model weights unavailable in commercial API-driven architectures. Our prototype therefore implements Layer 4 as a **secondary Guardrail LLM call** via the Groq API (~310ms overhead per request).
 
@@ -205,7 +201,7 @@ Core components include constraint enforcement mechanisms and a **secondary Guar
 
 ### 3.6 Layer 5: Output Handling and Validation
 
-This layer validates LLM outputs before returning them to users or downstream systems. In practice it runs regex-based checks for system prompt leakage (e.g., detecting if the model's response contains content matching the system prompt hash from Layer 3), policy violation scoring, and semantic consistency checks against the original request intent. It operates at <1ms locally because it has no LLM dependency — it works purely on the text of the output. In our evaluation, it contributed 1,825 blocks that none of the upstream layers caught, making it the only layer capable of stopping attacks that have already successfully influenced the LLM's generation.
+Layer 5 sits at the output boundary — between what the LLM produced and what gets returned to the user or passed downstream. In practice it runs regex-based checks for system prompt leakage (e.g., detecting if the model's response contains content matching the system prompt hash from Layer 3), policy violation scoring, and semantic consistency checks against the original request intent. It operates at <1ms locally because it has no LLM dependency — it works purely on the text of the output. In our evaluation, it contributed 1,825 blocks that none of the upstream layers caught, making it the only layer capable of stopping attacks that have already successfully influenced the LLM's generation.
 
 **Layer 5 Outputs:**
 ```json
@@ -220,7 +216,7 @@ This layer validates LLM outputs before returning them to users or downstream sy
 
 ### 3.7 Layer 6: Feedback and Adaptive Monitoring
 
-This layer acts as the adaptive coordinator of the stack. It monitors risk scores from Layers 1 and 2 and transitions the system between three isolation modes: **Standard** (risk < 0.4) uses normal system/user role separation; **Metadata** (risk 0.4–0.7) wraps user input in <user_input> XML tags; **Strict** (risk > 0.7) applies randomized delimiter tokens, multi-layer tagging, and activates the Layer 4 Inner Monologue Check. A leakage detection event in Layer 5 forces the entire session into Strict mode for all subsequent turns. During our 11,490-trace evaluation, Layer 6 operated in passive logging mode — thresholds were recorded but not applied in real time, ensuring reproducibility. It maintains time-series data on attack patterns and system performance.
+Layer 6 monitors risk scores from Layers 1 and 2 and transitions the system between three isolation modes: **Standard** (risk < 0.4) uses normal system/user role separation; **Metadata** (risk 0.4–0.7) wraps user input in *< user_input >* XML tags; **Strict** (risk > 0.7) applies randomized delimiter tokens, multi-layer tagging, and activates the Layer 4 Inner Monologue Check. A leakage detection event in Layer 5 forces the entire session into Strict mode for all subsequent turns. During our 11,490-trace evaluation, Layer 6 operated in passive logging mode — thresholds were recorded but not applied in real time, ensuring reproducibility. It maintains time-series data on attack patterns and system performance.
 
 
 **Layer 6 Outputs:**
@@ -243,8 +239,6 @@ The layers are not independent modules — they share state. When Layer 2 flags 
 
 ### 3.9 Practical Design Patterns
 
-The workflow model derives six practical design patterns:
-
 1. **Defense-in-Depth Pipeline** — L1 and L2 run as two independent classifiers before the prompt reaches the LLM — together responsible for 5,060 of the 7,019 total blocks in our evaluation. Neither alone achieves this; the combination does.
 2. **Guardrail Model Architecture** — separate, smaller LLMs validating primary LLM outputs (Layer 4).
 3. **Representation-Level Defense** *(recommended enhancement)* — monitoring hidden layer activations following approaches like JBShield (~0.95 F1). Not implemented in our API-driven prototype due to model weight access requirements, but recommended for deployments with white-box model access (Layer 4).
@@ -258,11 +252,11 @@ The workflow model derives six practical design patterns:
 
 ### 4.1 Sampling, Execution Logic, and Dataset Splits
 
-The experimental corpus consisted of **11,490 total execution traces** generated over **3.5 hours** using multithreaded orchestration on AMD Ryzen 7 8840HS (8 Cores, 16 Threads), 32 GB RAM. To prevent overfitting, the corpus was divided into three strictly isolated partitions: a development set for threshold calibration, a validation set for ablation runs, and a held-out test set for final evaluation.
+The experimental corpus consisted of **11,490 total execution traces** generated over **3.5 hours** using multithreaded orchestration on AMD Ryzen 7 8840HS (8 Cores, 16 Threads), 32 GB RAM. The corpus was split into three non-overlapping partitions — a development set for threshold calibration, a validation set for ablation runs, and a held-out test set for final evaluation — with no data crossing between them.
 
 For Full-Stack performance evaluation, we selected a high-adversarial **unseen test subset of 7,850 traces**. The remaining 3,640 traces comprised 850 neutral interactions for FPR validation and 2,790 traces from isolated ablation runs, threshold tuning, and failed pilot iterations.
 
-For paired statistical comparison (Baseline vs. **Full-Stack**), analysis was performed on a **core test subset of 260 unique adversarial prompts** (130 Standard + 130 Stealth variants). The 130 stealth variants represent a stratified sample drawn from the broader 2,450-trace stealth corpus (§4.6), selected to ensure diverse attack category coverage while maintaining a balanced paired comparison. Attack success was determined by an **independent LLM-as-a-judge (Llama-3.1-405b)** to reduce evaluation bias. While a single-judge evaluation carries inherent risks of bias, the 405b parameter scale provides a strong baseline. Evaluation used a strict binary success/fail rubric with deterministic temperature (T=0.0) and chain-of-thought suppressed to enforce strict boolean classification. The 260-prompt subset represents a controlled, identity-paired evaluation to measure the direct effectiveness of the stack, whereas the larger 7,850-trace test set provides a broader measure of aggregate resilience across diverse attack variations.
+For paired statistical comparison (Baseline vs. **Full-Stack**), analysis was performed on a **core test subset of 260 unique adversarial prompts** (130 Standard + 130 Stealth variants). The 130 stealth variants represent a stratified sample drawn from the broader 2,450-trace stealth corpus (§4.6), selected to ensure diverse attack category coverage while maintaining a balanced paired comparison. Attack success was determined by an **independent LLM-as-a-judge (Llama-3.1-405b)** to reduce evaluation bias. While a single-judge evaluation carries inherent risks of bias, the 405b parameter scale provides a strong baseline. Evaluation used a strict binary success/fail rubric with deterministic temperature (T=0.0) and chain-of-thought suppressed to enforce strict boolean classification.
 
 **Infrastructure:**
 - **LLM Backend:** `groq/llama-3.3-70b-versatile` (via local LiteLLM proxy)
@@ -272,8 +266,6 @@ For paired statistical comparison (Baseline vs. **Full-Stack**), analysis was pe
 - **Parameters:** Temperature: 0.0 (Deterministic), Top P: 1.0
 
 ### 4.2 Attack Corpus Distribution
-
-The experimental evaluation utilized a heterogeneous corpus of **11,490 execution traces**, categorized by attack methodology and adversarial complexity:
 
 | Attack Category | Traces (N) | Description |
 |---|---|---|
@@ -288,7 +280,7 @@ The experimental evaluation utilized a heterogeneous corpus of **11,490 executio
 
 ### 4.3 Experimental Configuration Matrix
 
-We defined four experimental ablation configurations alongside the Baseline to isolate the efficacy of individual layer categories versus the integrated stack:
+Four ablation configurations were run alongside the Baseline, each activating a different layer subset:
 
 | Config | L1 | L2 | L3 | L4 | L5 | L6 |
 |---|---|---|---|---|---|---|
@@ -303,8 +295,6 @@ We defined four experimental ablation configurations alongside the Baseline to i
 ![Incremental defense layering (A--E) and their cumulative role in strengthening prompt injection resistance.](figures/fig4.jpeg)
 
 ### 4.4 Overall Effectiveness
-
-Our evaluation demonstrates the substantial effectiveness of the six-layer model:
 
 - **Baseline (A) Attack Success Rate: 80.8%** (95% CI [75.5%, 85.1%])
 - **Full-Stack (E) ASR: 18.9%** (Aggregate over 7,850-trace test set) / **13.5%** (Paired Core Subset of 260 prompts)
@@ -328,7 +318,7 @@ The 18.9% figure comes from the full 7,850-trace held-out set — diverse attack
 
 ### 4.6 Coordinated Defense against Stealth Attacks (RQ3)
 
-Testing against **Stealth Attacks** (a specific corpus of **2,450 traces**) designed to evade semantic filters revealed critical architectural weaknesses in standalone configurations. The stealth subset is a **cross-category overlay**: the 30 unique base prompts span Direct Injection, Semantic Injection, and Context Override categories, expanded into 2,450 traces via automated adversarial refinement (iterative HouYi refinement process), employing instruction character replacement and semantic obfuscation to evade Layer 2. These traces are included *within* the category counts in Table 4.2, not additional to the 11,490 total. This corpus was **strictly withheld from any threshold tuning or defense prompt engineering** during the development phase.
+The stealth corpus — 2,450 traces built specifically to evade semantic filters — exposed where standalone configurations break down. The stealth subset is a **cross-category overlay**: the 30 unique base prompts span Direct Injection, Semantic Injection, and Context Override categories, expanded into 2,450 traces via automated adversarial refinement (iterative HouYi refinement process), employing instruction character replacement and semantic obfuscation to evade Layer 2. These traces are included *within* the category counts in Table 4.2, not additional to the 11,490 total. This corpus was **strictly withheld from any threshold tuning or defense prompt engineering** during the development phase.
 
 | Configuration | ASR | Notes |
 |---|---|---|
@@ -339,8 +329,6 @@ Testing against **Stealth Attacks** (a specific corpus of **2,450 traces**) desi
 > *Note: The 0.0% ASR applies specifically to the stealth attack subset and does not represent the aggregate performance across the full 11,490-trace corpus. ASR figures in this table reflect performance on the stealth-only subset of 2,450 traces and are not directly comparable to the pooled figures in Table 4.5 (e.g., Output Solo (D) achieves 25.4% on stealth traces vs. 55.4% pooled).*
 
 ### 4.7 Latency
-
-The defense architecture adds modest latency beyond the base LLM inference:
 
 | Layer | Overhead |
 |---|---|
@@ -388,8 +376,6 @@ No benign requests were incorrectly flagged as malicious by the semantic (Layer 
 
 ### 4.9 Trust Boundary Violation Analysis (RQ2)
 
-Our experimental results identify three primary trust boundary violations that enable successful prompt injection:
-
 1. **Input–Instruction Boundary Collapse (Layer 2 → Layer 3):** The most critical violation occurs when user-controlled data crosses into the instruction context. Layer 3 isolation alone fails to prevent this (80.8% ASR) because the shared attention mechanism in transformer architectures does not enforce privilege separation between `system` and `user` message roles. Successful attacks in this category include context override (2,595 traces) and semantic injection (2,385 traces).
 
 2. **Output Trust Escalation (Layer 4 → Layer 5):** Attacks that bypass the guardrail LLM produce outputs that downstream components treat as trusted. Without Layer 5 validation, leaked system prompts or credentials in LLM outputs propagate to the user. The Output Solo (D) configuration achieves 25.4% ASR on stealth attacks, confirming that output validation alone catches a substantial fraction but not all violations.
@@ -402,14 +388,15 @@ Our experimental results identify three primary trust boundary violations that e
 
 ### 5.1 Analysis of Key Findings
 
-The most operationally significant result is not the aggregate ASR reduction — it is the stealth subset going from 80.8% to 0.0%. These were the 2,450 traces specifically designed to evade semantic filters, and the full stack blocked all of them. That outcome only happens because Layer 5 functions as a catch-all for attacks that slip past earlier stages: it added 1,825 blocks beyond what Layer 2 alone caught. Without it, the stealth ASR would be substantially higher.
-The McNemar result (χ²(1) = 173.0, p < .001, Cohen's h = 1.33) tells a clean story: in 175 out of 260 paired comparisons, the Full Stack blocked an attack the Baseline did not. The reverse — baseline blocking something the Full Stack missed — occurred zero times. This is not a marginal improvement; it reflects a structural difference in how coordinated and isolated defenses behave under adversarial pressure.
+The aggregate ASR reduction from 80.8% to 18.9% is the headline number, but the stealth subset result is harder to explain away. These 2,450 traces were built specifically to evade semantic filters — iterative HouYi refinement, character-level obfuscation, semantic paraphrasing — and the full stack blocked every one of them. What made that possible was Layer 5: it contributed 1,825 blocks beyond what Layer 2 alone caught. Without output validation as a final stage, some fraction of those stealth attacks would have gone through.
+
+The McNemar comparison is straightforward: 175 cases where the Full Stack blocked an attack the Baseline did not, zero cases where the Baseline blocked something the Full Stack missed. We ran the same 260 prompts against both configurations, so this is not a sampling artifact. The asymmetry is real, and the effect size is large (Cohen's h = 1.33). What we cannot claim is that 18.9% aggregate ASR is a ceiling — the corpus, while large, was constructed under specific attacker assumptions, and a more adaptive adversary with direct knowledge of the stack would likely find a higher residual. The 0.0% stealth result is the stronger claim because that subset was withheld from all tuning.
 
 ### 5.2 Isolation Requires Complementary Filtering (Layer 3 Analysis)
 
-The most significant finding is the quantified failure of Trust Boundaries (Layer 3) when acting in isolation. In modern API-driven LLM integrations, "isolation" primarily refers to **logical isolation** — separating system instructions from user space via programmatic roles (`system` vs `user` messages) — rather than true separate-process execution memory isolation. Our experiments show this logical isolation remains **highly vulnerable to stealth injection attacks when used alone, yielding an 80.8% ASR**, showing no statistically significant difference from the unprotected baseline (p ≈ 1.0).
+Layer 3 — trust boundary enforcement — fails completely when running without upstream semantic filtering, and the experiments quantify exactly how badly. In modern API-driven LLM integrations, "isolation" primarily refers to **logical isolation** — separating system instructions from user space via programmatic roles (`system` vs `user` messages) — rather than true separate-process execution memory isolation. Our experiments show this logical isolation remains **highly vulnerable to stealth injection attacks when used alone, yielding an 80.8% ASR**, showing no statistically significant difference from the unprotected baseline (p ≈ 1.0).
 
-The specific mechanism is worth naming. A stealth attack can inject a closing </user_input> tag inside the user message, followed by fabricated SYSTEM-role instructions. Because Layer 3 enforces only logical role separation through API message roles, and the transformer's attention mechanism sees all tokens in a flat sequence regardless, the model can be made to treat the attacker's payload as a trusted instruction. Semantic filtering (Layer 2) catches this by evaluating the embedding similarity of the full input against known attack patterns before the isolation boundary is ever reached — it detects the intent of the injection even when the syntax is novel. Without Layer 2 upstream, Layer 3 has nothing to work with.
+A stealth attack can inject a closing *</ user_input >* tag inside the user message, followed by fabricated SYSTEM-role instructions. Because Layer 3 enforces only logical role separation through API message roles, and the transformer's attention mechanism sees all tokens in a flat sequence regardless, the model can be made to treat the attacker's payload as a trusted instruction. Semantic filtering (Layer 2) catches this by evaluating the embedding similarity of the full input against known attack patterns before the isolation boundary is ever reached — it detects the intent of the injection even when the syntax is novel. Without Layer 2 upstream, Layer 3 has nothing to work with.
 
 ### 5.3 Efficiency and Resource Utilization
 
@@ -443,8 +430,6 @@ Under the tested configuration, **total latency is ~347 ms** (~310 ms from the G
 ---
 
 ## 6. REPRODUCIBILITY AND EXPERIMENTAL PARAMETERS
-
-To ensure full reproducibility of our empirical findings, the complete implementation logic, orchestration pipeline, and raw dataset are open source:
 
 - **Source Code & Dataset:** `https://github.com/ArindamTripathi619/prompt-injection-experiments`
 
